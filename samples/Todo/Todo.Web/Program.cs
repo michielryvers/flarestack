@@ -23,7 +23,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
-app.MapFlarestackAccountEndpoints();
+app.MapFlarestackAccountEndpoints("/todos");
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.Run();

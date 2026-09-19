@@ -88,9 +88,10 @@ public static class FlarestackAuthentication
         services.AddCascadingAuthenticationState();
         return services;
     }
-    public static IEndpointRouteBuilder MapFlarestackAccountEndpoints(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapFlarestackAccountEndpoints(this IEndpointRouteBuilder endpoints, string defaultReturnUrl = "/")
     {
-        endpoints.MapGet("/account/login", (string? returnUrl) => Results.Challenge(new AuthenticationProperties { RedirectUri = IsLocalReturnUrl(returnUrl) ? returnUrl : "/todos" }, [OpenIdConnectDefaults.AuthenticationScheme]));
+        if (!IsLocalReturnUrl(defaultReturnUrl)) throw new ArgumentException("Default return URL must be local.", nameof(defaultReturnUrl));
+        endpoints.MapGet("/account/login", (string? returnUrl) => Results.Challenge(new AuthenticationProperties { RedirectUri = IsLocalReturnUrl(returnUrl) ? returnUrl : defaultReturnUrl }, [OpenIdConnectDefaults.AuthenticationScheme]));
         endpoints.MapPost("/account/logout", async (HttpContext context, Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery) => {
             await antiforgery.ValidateRequestAsync(context);
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

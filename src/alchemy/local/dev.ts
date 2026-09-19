@@ -1,8 +1,13 @@
 import { readdir, stat, open, cp, mkdir, rm } from "node:fs/promises";
 import { resolve, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { LocalLogs, readLines } from "./logs.ts";
 
-const infra = resolve(import.meta.dirname, "../infra");
+import { loadLocalApp } from "./config.ts";
+
+if (!process.argv[2]) throw new Error("Usage: dev.ts <local-app.json>");
+const app = loadLocalApp(process.argv[2]);
+const infra = app.infra;
 const logRoot = resolve(infra, ".alchemy/log");
 const started = new Date().toISOString();
 const dashboardUrl = "http://127.0.0.1:18888";
@@ -23,7 +28,7 @@ process.on("SIGTERM", stop);
 function spawn(command: string[], service: string, cwd = infra, echo = true) {
   const child = Bun.spawn(command, {
     cwd, stdout: "pipe", stderr: "pipe",
-    env: { ...process.env, PUBLIC_ORIGIN: process.env.PUBLIC_ORIGIN ?? "http://localhost:8787", ALCHEMY_TELEMETRY_DISABLED: "1", NO_COLOR: "1" },
+    env: { ...process.env, PUBLIC_ORIGIN: process.env.PUBLIC_ORIGIN ?? app.publicOrigin, ALCHEMY_TELEMETRY_DISABLED: "1", NO_COLOR: "1" },
   });
   children.add(child);
   for (const [stream, name] of [[child.stdout, "stdout"], [child.stderr, "stderr"]] as const) {
@@ -73,7 +78,7 @@ async function scanFiles(initial = false) {
 }
 const attached = new Set<string>();
 async function scanContainers() {
-  const process = Bun.spawn(["docker", "ps", "--filter", "name=^workerd-flarestack-compatibility-", "--format", "{{.ID}} {{.Names}}"], { stdout: "pipe", stderr: "pipe" });
+  const process = Bun.spawn(["docker", "ps", "--filter", `name=^workerd-${app.stackName}-`, "--format", "{{.ID}} {{.Names}}"], { stdout: "pipe", stderr: "pipe" });
   const [output, error, exit] = await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text(), process.exited]);
   if (exit) throw new Error(`Docker log discovery failed: ${error.trim()}`);
   for (const line of output.trim().split("\n")) {
@@ -111,16 +116,19 @@ try {
   }
   logs.emit("flarestack.local", JSON.stringify({ message: "Local OTLP log collection started", endpoint }));
   console.log(`Local logs → ${endpoint}; Aspire dashboard → ${dashboardUrl}`);
-  const root = resolve(infra, "../../..");
-  const authBundle = spawn(["bun", "run", "build:auth-ui"], "flarestack.build", root);
-  if (await authBundle.exited !== 0) throw new Error("Authentication browser bundle build failed");
-  const buildContext = resolve(root, ".alchemy/todo-build");
+  const root = app.root;
+  if (app.beforeStart) {
+    const build = spawn(app.beforeStart, "flarestack.build", root);
+    if (await build.exited !== 0) throw new Error("Application preparation command failed");
+  }
+  const buildContext = app.context;
   await rm(buildContext, { recursive: true, force: true });
   await mkdir(buildContext, { recursive: true });
-  for (const source of ["Directory.Build.props", "Directory.Packages.props", "global.json", "src/Flarestack.D1", "src/Flarestack.Authentication", "samples/Todo"]) {
-    await cp(resolve(root, source), resolve(buildContext, source), { recursive: true, filter: path => !path.split("/").some(part => ["bin", "obj"].includes(part)) });
+  for (const source of app.buildSources) {
+    await cp(resolve(root, source), resolve(buildContext, source), { recursive: true, filter: path => !path.split("/").some(part => ["bin", "obj", ".alchemy", "node_modules"].includes(part)) });
   }
-  const alchemy = spawn(["bun", "run", "../../../node_modules/alchemy/bin/cli.js", "dev", "--no-input"], "flarestack.alchemy");
+  const alchemyCli = fileURLToPath(new URL("../bin/cli.js", import.meta.resolve("alchemy")));
+  const alchemy = spawn(["bun", "run", alchemyCli, "dev", "--no-input"], "flarestack.alchemy");
   void alchemy.exited.then(code => { if (!stopping) { exitCode = code; stop(); } });
   let iteration = 0;
   while (!stopping) {

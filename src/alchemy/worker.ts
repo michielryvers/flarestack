@@ -1,23 +1,26 @@
-import { tracedRequest } from "../../../src/alchemy/tracing.ts";
+import { tracedRequest } from "./tracing.ts";
 import { Container, getContainer } from "@cloudflare/containers";
-import type * as Cloudflare from "alchemy/Cloudflare";
-import type { Worker } from "./alchemy.run.ts";
-import { d1Commands } from "../../../src/alchemy/d1-bridge.ts";
+import type { D1Database } from "@cloudflare/workers-types";
+import { d1Commands } from "./d1-bridge.ts";
 import { route } from "./router.ts";
 
-type Env = Cloudflare.InferEnv<typeof Worker>;
+export interface FlarestackWorkerEnv {
+  Database: D1Database;
+  Auth: { fetch(request: Request): Promise<Response> };
+  DotNet?: Parameters<typeof getContainer>[0];
+  LOCAL_ORIGIN?: string;
+  CONTAINER_ENV: Record<string, string>;
+  OTEL_EXPORTER_OTLP_ENDPOINT: string;
+  OTEL_EXPORTER_OTLP_HEADERS: string;
+}
+type Env = FlarestackWorkerEnv;
 export class DotNet extends Container<Env> {
   defaultPort = 8080;
   sleepAfter = "30m";
-  envVars = {
-    ASPNETCORE_ENVIRONMENT: "Development",
-    Flarestack__Authentication__ClientId: "todo-blazor",
-    Flarestack__Authentication__BackchannelBaseAddress: "http://auth.internal",
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4319",
-    OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf",
-    OTEL_BSP_SCHEDULE_DELAY: "500",
-    OTEL_SERVICE_NAME: "flarestack.todo",
-  };
+  constructor(...args: ConstructorParameters<typeof Container<Env>>) {
+    super(...args);
+    this.envVars = args[1].CONTAINER_ENV;
+  }
 }
 // Assignment invokes the SDK registry setter; a static field would shadow it.
 DotNet.outboundByHost = {

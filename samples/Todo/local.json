@@ -1,0 +1,23 @@
+{
+  "stackName": "flarestack-compatibility",
+  "infrastructureDirectory": "infra",
+  "project": "Todo.Web/Todo.Web.csproj",
+  "publicOrigin": "http://localhost:8787",
+  "bridgePort": 8789,
+  "buildRoot": "../..",
+  "buildContext": ".alchemy/todo-build",
+  "dockerfile": "samples/Todo/Dockerfile",
+  "buildSources": [
+    "Directory.Build.props",
+    "Directory.Packages.props",
+    "global.json",
+    "src/Flarestack.D1",
+    "src/Flarestack.Authentication",
+    "samples/Todo"
+  ],
+  "beforeStart": [
+    "bun",
+    "run",
+    "build:auth-ui"
+  ]
+}

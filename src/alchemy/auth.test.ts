@@ -1,3 +1,4 @@
+const client = { clientId: "custom-blazor", clientName: "Custom App", resourceId: "CustomOAuthClient" };
 import { expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { getMigrations } from "better-auth/db/migration";
@@ -8,7 +9,7 @@ import { authOptions } from "./auth-options.ts";
 test("real Better Auth plugin publishes path-based issuer and PKCE metadata", async () => {
   const database = new Database(":memory:");
   try {
-    const options = { ...authOptions("http://localhost:8787"), database, secret: crypto.randomUUID() + crypto.randomUUID() };
+    const options = { ...authOptions("http://localhost:8787", client), database, secret: crypto.randomUUID() + crypto.randomUUID() };
     await (await getMigrations(options)).runMigrations();
     const auth = betterAuth(options);
     for (const [path, handler] of [
@@ -28,5 +29,5 @@ test("real Better Auth plugin publishes path-based issuer and PKCE metadata", as
 });
 
 test.each(["http://evil.test", "https://public.test/path", "https://user:pass@public.test", "https://public.test?issuer=evil"])("rejects invalid public origin %s", origin => {
-  expect(() => authOptions(origin)).toThrow();
+  expect(() => authOptions(origin, client)).toThrow();
 });

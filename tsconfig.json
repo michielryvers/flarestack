@@ -1,8 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ESNext", "module": "Preserve", "moduleResolution": "Bundler",
-    "strict": true, "noEmit": true, "skipLibCheck": true,
-    "allowImportingTsExtensions": true, "types": ["bun"], "lib": ["ESNext", "DOM"]
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "bun"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ]
   },
-  "include": ["spikes/**/*.ts", "src/**/*.ts"]
+  "include": [
+    "spikes/**/*.ts",
+    "src/**/*.ts",
+    "samples/**/*.ts",
+    "tests/e2e/verify-telemetry.ts"
+  ]
 }

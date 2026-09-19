@@ -66,7 +66,7 @@ The supervisor stages a clean Docker build context under `.alchemy/todo-build`
 to avoid the pinned Alchemy watcher's self-triggering restart bug. Restart the
 AppHost after .NET edits in container mode. Fast mode is the hot-reload workflow.
 
-D1 and provider data persist under `spikes/compatibility/infra/.alchemy/` across
+D1 and provider data persist under `samples/Todo/infra/.alchemy/` across
 mode changes and restarts. Replacing a container can require a fresh ASP.NET login;
 accounts and todos remain. Logout clears the app cookie and invokes the provider's
 confirmation page. App and provider cookies are distinct by design.
@@ -125,5 +125,32 @@ The hosting project is an initial source-level adapter using Aspire executable
 resources, with endpoints, health checks, dependencies and standard resource
 commands. Public package design, templates, production authentication hardening,
 cloud secrets/state verification, and deployment integration remain future work.
+
+## Framework and sample boundary
+
+`src/alchemy` owns `FlarestackApp`, `createAuthWorker`, OAuth provisioning, edge
+routing, internal bridges, container outbound handlers, and tracing. Its `local`
+directory owns process supervision, log collection, build staging and .NET watch.
+Framework code does not import the sample or the compatibility spikes.
+
+`samples/Todo/infra` declares the database/migrations, OAuth client identity and
+container environment, then calls `FlarestackApp`. Its Worker entrypoints are thin
+exports of framework implementations. `samples/Todo/local.json` supplies paths,
+ports, stack name, build inputs and an optional preparation command; paths are
+relative to that file, and build inputs are relative to `buildRoot`.
+
+The AppHost calls `AddFlarestack` with a `FlarestackOptions` configuration file,
+runtime directory, mode and application resource name. The returned `Platform`
+and optional `Application` builders allow further Aspire configuration. Container
+mode returns no host application resource. Apps expose `/health` and use the
+standard Flarestack account routes and OIDC callback paths.
+
+These are source APIs; local package consumption and templates are the next step.
+The legacy stack name `flarestack-compatibility` and resource IDs remain stable to
+preserve state. For an existing checkout, stop Aspire and move
+`spikes/compatibility/infra/.alchemy` to `samples/Todo/infra/.alchemy` **before**
+starting the new layout. Do not overwrite a destination that already contains
+state. Fresh checkouts need no migration. `spikes/compatibility` now contains only
+the historical .NET probe, Dockerfile, smoke test and narrow D1 protocol test.
 See [compatibility notes](docs/compatibility.md) and the
 [implementation brief](flarestack-implementation-brief.md).

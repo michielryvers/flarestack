@@ -205,3 +205,26 @@ Verified: fast-mode E2E plus Razor edit/revert through the Worker; container-mod
 E2E; connected Worker/.NET/D1/auth traces and local logs in both modes. Switching
 modes preserves D1 and provider state. Cloud deployment remains unimplemented and
 has not been run.
+
+## Framework extraction (2026-09-19)
+
+The historical commands and findings above describe the earlier spike. Current
+entrypoints live in `samples/Todo/infra`; the reusable implementation lives in
+`src/alchemy`, with local process/log supervision in `src/alchemy/local`.
+`FlarestackApp` composes the same resource IDs; `createAuthWorker` accepts the
+sample database and OAuth client settings. The sample retains the stack name
+`flarestack-compatibility` to preserve local identities. Its `.alchemy` state was
+moved with the infrastructure directory. Follow the README migration note when
+updating an existing checkout.
+
+The pinned Alchemy API supports an Effect-based Worker returned from a factory;
+its sample entrypoint exports that Worker as default. The container runtime class
+and `ContainerProxy` must still be exported from the sample Worker entrypoint.
+Container environment is passed through a JSON binding and applied by the shared
+container constructor. `outboundByHost` remains an assignment after the class to
+invoke the SDK registry setter.
+
+`AddFlarestack` now owns both the supervisor and optional .NET watcher wiring,
+using an explicit local configuration file and runtime directory. No framework
+source imports Todo or the spike. This extraction does not add package publishing,
+a template, or cloud deployment support.

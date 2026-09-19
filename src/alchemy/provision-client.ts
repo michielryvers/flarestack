@@ -5,17 +5,17 @@ import { Database } from "@alchemy.run/better-auth/Database";
 import { betterAuth } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
 import * as Effect from "effect/Effect";
-import { authOptions } from "../../spikes/compatibility/infra/auth-options.ts";
+import { authOptions, type OAuthClientOptions } from "./auth-options.ts";
 
-export const provisionClient = (origin: string): Effect.Effect<void, never, Database> => Effect.gen(function* () {
+export const provisionClient = (origin: string, client: OAuthClientOptions): Effect.Effect<void, never, Database> => Effect.gen(function* () {
   const db = yield* Database;
   const support = db.migrate!;
   const Ensure = Action("Flarestack.OAuthClient", Effect.gen(function* () {
     const acquire = yield* support.connect;
-    return (_input: { identity: Record<string, unknown>; origin: string; revision: number }) => Effect.scoped(Effect.gen(function* () {
+    return (_input: { identity: Record<string, unknown>; origin: string; revision: number; client: OAuthClientOptions }) => Effect.scoped(Effect.gen(function* () {
       const database = yield* acquire;
       yield* Effect.promise(async () => {
-        const options = { ...authOptions(origin, true), database, secret: "provisioning-only-not-used-to-issue-tokens", telemetry: { enabled: false } };
+        const options = { ...authOptions(origin, client, true), database, secret: "provisioning-only-not-used-to-issue-tokens", telemetry: { enabled: false } };
         await (await getMigrations(options)).runMigrations();
         const auth = betterAuth(options);
         const context = await auth.$context;
@@ -27,23 +27,23 @@ export const provisionClient = (origin: string): Effect.Effect<void, never, Data
         const session = await context.internalAdapter.createSession(actor.id, false);
         const cookie = await serializeSignedCookie(context.authCookies.sessionToken.name, session.token, context.secret, { path: "/" });
         const headers = new Headers({ cookie: cookie.split(";")[0]! });
-        const existing = await context.adapter.findOne({ model: "oauthClient", where: [{ field: "clientId", value: "todo-blazor" }] });
+        const existing = await context.adapter.findOne({ model: "oauthClient", where: [{ field: "clientId", value: client.clientId }] });
         const metadata = {
           application_type: origin.startsWith("http:") ? "native" as const : "web" as const,
-          client_name: "Flarestack Todo", redirect_uris: [`${origin}/signin-oidc`],
+          client_name: client.clientName, redirect_uris: [`${origin}/signin-oidc`],
           post_logout_redirect_uris: [`${origin}/signout-callback-oidc`],
           token_endpoint_auth_method: "none", grant_types: ["authorization_code"], response_types: ["code" as const],
           scope: "openid profile email", skip_consent: true, require_pkce: true, enable_end_session: true,
         };
         try {
-        if (existing) await auth.api.adminUpdateOAuthClient({ headers, body: { client_id: "todo-blazor", update: metadata } });
-        else await auth.api.adminCreateOAuthClient({ headers, body: metadata });
+          if (existing) await auth.api.adminUpdateOAuthClient({ headers, body: { client_id: client.clientId, update: metadata } });
+          else await auth.api.adminCreateOAuthClient({ headers, body: metadata });
         } finally { await context.internalAdapter.deleteSession(session.token); }
       });
-      return { clientId: "todo-blazor" };
+      return { clientId: client.clientId };
     }));
   }));
-  const result = yield* Ensure("TodoOAuthClient", { identity: support.identity, origin, revision: 1 });
+  const result = yield* Ensure(client.resourceId, { identity: support.identity, origin, client, revision: 2 });
   const runtime = yield* CurrentRuntimeContext;
-  if (runtime) yield* runtime.set("TodoOAuthClient", result as never);
+  if (runtime) yield* runtime.set(client.resourceId, result as never);
 }) as Effect.Effect<void, never, Database>;

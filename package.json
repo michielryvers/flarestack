@@ -5,14 +5,12 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "bun test spikes/compatibility src/alchemy",
-    "dev:spike": "bun spikes/compatibility/local/dev.ts",
-    "dev:spike:raw": "cd spikes/compatibility/infra && alchemy dev",
-    "verify:telemetry": "bun spikes/compatibility/local/verify.ts",
+    "verify:telemetry": "bun tests/e2e/verify-telemetry.ts",
     "dev": "aspire run",
     "test:e2e": "playwright test",
     "build:auth-ui": "bun build src/Flarestack.Authentication/browser/sign-in.ts --target browser --minify --outfile src/Flarestack.Authentication/wwwroot/sign-in.js",
     "dev:container": "Flarestack__LocalMode=Container aspire run",
-    "dev:standalone": "bun spikes/compatibility/local/dev.ts",
+    "dev:standalone": "bun src/alchemy/local/dev.ts samples/Todo/local.json",
     "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test",
     "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload"
   },
