@@ -14,6 +14,7 @@ shell integration disabled, prefix commands with `mise exec --`.
 
 ```sh
 bun install --frozen-lockfile
+bun run prepare:local
 aspire run
 ```
 
@@ -26,7 +27,7 @@ API key, which the AppHost passes to exporters.
 Fast mode is the default. Aspire runs:
 
 - **cloudflare**: the Bun adapter that supervises Alchemy, collects local process
-  logs, and builds the authentication browser asset. Alchemy owns D1, migrations,
+  logs. Alchemy owns D1, migrations,
   Better Auth, and the edge Worker.
 - **todo**: a supervised `dotnet watch` process. Razor/C# edits are applied through
   the .NET hot-reload workflow; unsupported edits restart the .NET app. The Worker
@@ -121,9 +122,8 @@ local ports and state. Raw Alchemy bypasses telemetry collection.
 ## Scope
 
 Local Aspire orchestration, fast mode and container fidelity mode are implemented.
-The hosting project is an initial source-level adapter using Aspire executable
-resources, with endpoints, health checks, dependencies and standard resource
-commands. Public package design, templates, production authentication hardening,
+The hosting package uses Aspire executable resources, with endpoints, health checks, dependencies and standard resource
+commands. Templates, production authentication hardening,
 cloud secrets/state verification, and deployment integration remain future work.
 
 ## Framework and sample boundary
@@ -145,7 +145,8 @@ and optional `Application` builders allow further Aspire configuration. Containe
 mode returns no host application resource. Apps expose `/health` and use the
 standard Flarestack account routes and OIDC callback paths.
 
-These are source APIs; local package consumption and templates are the next step.
+The sample consumes locally packed NuGet packages and an npm tarball; templates
+are the next step.
 The legacy stack name `flarestack-compatibility` and resource IDs remain stable to
 preserve state. For an existing checkout, stop Aspire and move
 `spikes/compatibility/infra/.alchemy` to `samples/Todo/infra/.alchemy` **before**
@@ -154,3 +155,34 @@ state. Fresh checkouts need no migration. `spikes/compatibility` now contains on
 the historical .NET probe, Dockerfile, smoke test and narrow D1 protocol test.
 See [compatibility notes](docs/compatibility.md) and the
 [implementation brief](flarestack-implementation-brief.md).
+
+## Local packages
+
+`bun run prepare:local` builds the authentication browser asset, packs
+`Flarestack.D1`, `Flarestack.Authentication`, and `Aspire.Hosting.Flarestack` into
+`artifacts/nuget`, packs `@flarestack/alchemy` into `artifacts/npm`, installs the
+sample's tarball dependency, and restores the solution. All four packages use
+`0.1.0-local.1`. Nothing is published.
+
+The sample and AppHost use NuGet `PackageReference`s. Infrastructure imports
+`@flarestack/alchemy`, and Aspire starts the supervisor/watch scripts from the
+sample's installed package. Docker stages the local NuGet feed with the sample;
+framework source directories are not part of that build context. The authentication
+package carries its `_content/Flarestack.Authentication/sign-in.js` browser asset.
+
+After editing framework code, stop Aspire, run `bun run prepare:local`, then start
+Aspire again. Ordinary Todo edits still use hot reload. Preparation rejects a
+running AppHost and refreshes only the repository's own local-preview NuGet cache
+plus the sample tarball installation. NuGet's cache is isolated in `.packages/nuget`.
+The bootstrap dependency install uses the root lockfile; the sample has its own
+lockfile, refreshed when packing changes the tarball.
+
+Package preparation precedes the AppHost, so it uses a temporary Aspire dashboard
+on `127.0.0.1:18889` with OTLP HTTP on port 4320. Build/install logs are exported
+there and the dashboard shuts down when preparation finishes. To retain them in
+an existing receiver, set `OTEL_EXPORTER_OTLP_ENDPOINT` (and headers if needed).
+
+This is a local preview with pinned dependencies. Keep the NuGet versions in
+`Directory.Packages.props` and `src/Directory.Build.props` aligned with the npm
+manifest and tarball paths when changing the preview version. Published immutable
+versions, a license decision, a release policy and templates remain separate work.

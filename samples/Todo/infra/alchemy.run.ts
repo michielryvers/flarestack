@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
-import { FlarestackApp } from "../../../src/alchemy/index.ts";
-import { loadLocalApp } from "../../../src/alchemy/local/config.ts";
+import { FlarestackApp } from "@flarestack/alchemy";
+import { loadLocalApp } from "@flarestack/alchemy/local/config";
 import { Auth } from "./auth.ts";
 import { Database, client } from "./config.ts";
 

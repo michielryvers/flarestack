@@ -1,1 +1,1 @@
-export { default, DotNet, ContainerProxy } from "../../../src/alchemy/worker.ts";
+export { default, DotNet, ContainerProxy } from "@flarestack/alchemy/worker";

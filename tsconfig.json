@@ -19,6 +19,7 @@
     "spikes/**/*.ts",
     "src/**/*.ts",
     "samples/**/*.ts",
-    "tests/e2e/verify-telemetry.ts"
+    "tests/e2e/verify-telemetry.ts",
+    "scripts/**/*.ts"
   ]
 }

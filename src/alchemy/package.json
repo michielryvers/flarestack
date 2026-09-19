@@ -1,0 +1,41 @@
+{
+  "name": "@flarestack/alchemy",
+  "version": "0.1.0-local.1",
+  "description": "Flarestack Workers, D1, authentication and local Aspire runtime",
+  "type": "module",
+  "private": true,
+  "license": "UNLICENSED",
+  "exports": {
+    ".": "./index.ts",
+    "./worker": "./worker.ts",
+    "./local/config": "./local/config.ts",
+    "./local/dev": "./local/dev.ts",
+    "./local/watch-dotnet": "./local/watch-dotnet.ts"
+  },
+  "files": [
+    "*.ts",
+    "local/*.ts",
+    "!**/*.test.ts",
+    "README.md"
+  ],
+  "dependencies": {
+    "@alchemy.run/better-auth": "2.0.0-beta.79",
+    "@better-auth/oauth-provider": "1.7.5",
+    "@cloudflare/containers": "0.3.7",
+    "@effect/platform-bun": "4.0.0-rc.116",
+    "@effect/platform-node": "4.0.0-rc.116",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "2.11.0",
+    "@opentelemetry/otlp-transformer": "0.222.0",
+    "@opentelemetry/sdk-trace-base": "2.11.0",
+    "alchemy": "2.0.0-beta.79",
+    "better-auth": "1.7.5",
+    "better-call": "1.4.0",
+    "effect": "4.0.0-rc.116",
+    "@cloudflare/workers-types": "5.20260919.1",
+    "@opentelemetry/exporter-logs-otlp-proto": "0.222.0",
+    "@opentelemetry/resources": "2.11.0",
+    "@opentelemetry/sdk-logs": "0.222.0",
+    "@types/bun": "1.4.2"
+  }
+}

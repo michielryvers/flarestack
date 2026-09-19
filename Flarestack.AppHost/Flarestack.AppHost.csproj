@@ -9,5 +9,5 @@
     <UserSecretsId>1709b865-a1ba-4d20-8b74-0482bc3feb4c</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup><ProjectReference Include="../src/Aspire.Hosting.Flarestack/Aspire.Hosting.Flarestack.csproj" IsAspireProjectResource="false" /></ItemGroup>
+  <ItemGroup><PackageReference Include="Aspire.Hosting.Flarestack" /></ItemGroup>
 </Project>

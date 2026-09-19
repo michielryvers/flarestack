@@ -228,3 +228,19 @@ invoke the SDK registry setter.
 using an explicit local configuration file and runtime directory. No framework
 source imports Todo or the spike. This extraction does not add package publishing,
 a template, or cloud deployment support.
+
+## Local package consumption (2026-09-19)
+
+`bun run prepare:local` now produces three NuGet packages and the
+`@flarestack/alchemy` npm tarball at version `0.1.0-local.1`. The Todo web project
+and AppHost resolve these through package references. Todo infrastructure imports
+the tarball installation, including the local supervisor and watcher. The Docker
+build context carries the NuGet feed and sample without framework sources.
+
+Validation covers archive contents (including the authentication static asset),
+package restore metadata, repeat packing/installing, fast-mode hot reload,
+authenticated browser CRUD and isolation in both modes, and connected Aspire
+logs/traces with SQL text. The npm tarball was byte-identical across repeated builds.
+The package-preparation processes export logs to a temporary standalone Aspire
+receiver because package bootstrap happens before the AppHost can be built.
+Publishing, licensing and release policy remain outside this local preview.

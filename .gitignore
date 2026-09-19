@@ -490,3 +490,5 @@ node_modules/
 !.env.example
 
 .tools/
+
+.packages/

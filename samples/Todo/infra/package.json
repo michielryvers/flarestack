@@ -1,0 +1,9 @@
+{
+  "name": "flarestack-todo-infra",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz",
+    "alchemy": "2.0.0-beta.79"
+  }
+}

@@ -11,13 +11,8 @@
     "Directory.Build.props",
     "Directory.Packages.props",
     "global.json",
-    "src/Flarestack.D1",
-    "src/Flarestack.Authentication",
+    "NuGet.Config",
+    "artifacts/nuget",
     "samples/Todo"
-  ],
-  "beforeStart": [
-    "bun",
-    "run",
-    "build:auth-ui"
   ]
 }

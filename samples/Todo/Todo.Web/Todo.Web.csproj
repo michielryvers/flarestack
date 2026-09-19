@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/Flarestack.D1/Flarestack.D1.csproj" />
-    <ProjectReference Include="../../../src/Flarestack.Authentication/Flarestack.Authentication.csproj" />
+    <PackageReference Include="Flarestack.D1" />
+    <PackageReference Include="Flarestack.Authentication" />
   </ItemGroup>
   <ItemGroup><ProjectReference Include="../Todo.ServiceDefaults/Todo.ServiceDefaults.csproj" /></ItemGroup>
 </Project>

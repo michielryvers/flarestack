@@ -10,9 +10,10 @@
     "test:e2e": "playwright test",
     "build:auth-ui": "bun build src/Flarestack.Authentication/browser/sign-in.ts --target browser --minify --outfile src/Flarestack.Authentication/wwwroot/sign-in.js",
     "dev:container": "Flarestack__LocalMode=Container aspire run",
-    "dev:standalone": "bun src/alchemy/local/dev.ts samples/Todo/local.json",
+    "dev:standalone": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/dev.ts samples/Todo/local.json",
     "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test",
-    "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload"
+    "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload",
+    "prepare:local": "bun scripts/prepare-local.ts"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",
