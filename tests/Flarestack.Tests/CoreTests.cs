@@ -2,6 +2,7 @@ using Flarestack.Authentication;
 using Flarestack.D1;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
 using Todo.Web;
@@ -43,7 +44,46 @@ public class CoreTests
         await repo.DeleteAsync(user, "someone-elses-id"); Assert.Contains("owner_id=?", handler.Body); Assert.Contains("owner-a", handler.Body);
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => repo.ListAsync(new ClaimsPrincipal()));
     }
-    private static D1Database Create(RecordingHandler handler) => new(new HttpClient(handler) { BaseAddress = new("http://d1.internal") }, new(), NullLogger<D1Database>.Instance);
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SqlTracingIsOptInAndExcludesBoundParameters(bool enabled)
+    {
+        var spans = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "Flarestack.D1",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = spans.Add
+        };
+        ActivitySource.AddActivityListener(listener);
+        var handler = new RecordingHandler("{\"ok\":true,\"rows\":[]}");
+        var db = Create(handler, new() { IncludeSqlInTraces = enabled });
+        const string query = "SELECT * FROM todo WHERE owner_id = ?1";
+        const string mutation = "DELETE FROM todo WHERE id = ?1";
+        await db.QueryAsync<Row>(query, ["private-owner"]);
+        handler.Response = "{\"ok\":true,\"rowsAffected\":1}";
+        await db.ExecuteAsync(mutation, ["private-id"]);
+        handler.Response = "{\"ok\":true,\"results\":[]}";
+        await db.BatchAsync([new(query, ["private-owner"], D1CommandKind.Query), new(mutation, ["private-id"])]);
+        Assert.Equal(3, spans.Count);
+        var statements = new[] { query, mutation, query + ";\n" + mutation };
+        for (var i = 0; i < spans.Count; i++)
+        {
+            Assert.Equal(enabled ? statements[i] : null, spans[i].GetTagItem("db.query.text"));
+            Assert.DoesNotContain("private-", JsonSerializer.Serialize(spans[i].TagObjects));
+        }
+        handler.Response = "{\"ok\":true,\"rows\":[]}";
+        await db.QueryAsync<Row>("SELECT 1 /*" + new string('x', 20_000) + "*/");
+        if (enabled)
+        {
+            var text = Assert.IsType<string>(spans[^1].GetTagItem("db.query.text"));
+            Assert.Equal(16_384 + " /* truncated */".Length, text.Length);
+            Assert.EndsWith(" /* truncated */", text);
+        }
+        else Assert.Null(spans[^1].GetTagItem("db.query.text"));
+    }
+    private static D1Database Create(RecordingHandler handler, D1Options? options = null) => new(new HttpClient(handler) { BaseAddress = new("http://d1.internal") }, options ?? new(), NullLogger<D1Database>.Instance);
     public record Row(bool IsComplete, DateTimeOffset CreatedAt);
     private sealed class RecordingHandler(string response) : HttpMessageHandler
     {

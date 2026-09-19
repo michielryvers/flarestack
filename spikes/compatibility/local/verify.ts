@@ -12,10 +12,13 @@ for (const path of ["/", "/auth/.well-known/openid-configuration"]) {
 }
 const required = ["flarestack.alchemy", "flarestack.worker", "flarestack.auth", ...(fast ? ["flarestack.watch"] : ["flarestack.dotnet", "flarestack.container-proxy"])];
 for (let attempt = 0; attempt < 20; attempt++) {
-  const process = Bun.spawn(["aspire", "otel", "logs", ...dashboardArgs, "--format", "Json", "--limit", "1000", "--non-interactive"], { stdout: "pipe", stderr: "pipe" });
-  const [output, error, code] = await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text(), process.exited]);
-  assert.equal(code, 0, error);
-  const records: { resourceName: string; message: string }[] = JSON.parse(output);
+  // Query per service so busy request logs cannot evict quiet startup logs from the result window.
+  const records: { resourceName: string; message: string }[] = (await Promise.all(required.map(async service => {
+    const command = Bun.spawn(["aspire", "otel", "logs", service, ...dashboardArgs, "--format", "Json", "--limit", "1000", "--non-interactive"], { stdout: "pipe", stderr: "pipe" });
+    const [output, error, code] = await Promise.all([new Response(command.stdout).text(), new Response(command.stderr).text(), command.exited]);
+    assert.equal(code, 0, error);
+    return JSON.parse(output);
+  }))).flat();
   const seen = new Set(records.map(record => record.resourceName));
   if (required.every(service => seen.has(service)) &&
       records.some(record => record.resourceName === "flarestack.worker" && record.message === "Edge request completed") &&

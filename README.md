@@ -100,6 +100,13 @@ container telemetry uses `flarestack.todo`. The host collector also captures
 Alchemy, auth/edge Workers, build/watch output, and container/proxy startup errors.
 Metrics are not configured.
 
+The Todo sample enables SQL text in Development. In Aspire, open a `D1 query`,
+`D1 execute`, or `D1 batch` span and inspect `db.query.text`. The framework setting
+`Flarestack:D1:IncludeSqlInTraces` defaults to false. Bound parameter values are
+never attached; use placeholders because literals in SQL text remain visible.
+Batch statements appear together, and SQL text is capped at 16,384 characters
+plus a truncation marker.
+
 ```sh
 aspire otel traces --non-interactive
 aspire otel logs --non-interactive

@@ -33,6 +33,7 @@ public sealed class D1Options
     public int TimeoutSeconds { get; set; } = 30;
     public int MaxRequestBytes { get; set; } = 1_048_576;
     public int MaxCommands { get; set; } = 100;
+    public bool IncludeSqlInTraces { get; set; }
 }
 public static class D1Registration
 {
@@ -102,6 +103,15 @@ public sealed class D1Database(HttpClient client, D1Options options, ILogger<D1D
         using var activity = ActivitySource.StartActivity($"D1 {operation}", ActivityKind.Client);
         activity?.SetTag("db.system.name", "sqlite").SetTag("db.operation.name", operation);
         var fields = JsonSerializer.SerializeToElement(command);
+        if (activity?.IsAllDataRequested == true && options.IncludeSqlInTraces)
+        {
+            // Capture statement text only. Bound parameter values never become span attributes.
+            var sql = operation == "batch"
+                ? string.Join(";\n", fields.GetProperty("commands").EnumerateArray().Select(c => c.GetProperty("sql").GetString()))
+                : fields.GetProperty("sql").GetString()!;
+            const int maxSqlLength = 16_384;
+            activity.SetTag("db.query.text", sql.Length <= maxSqlLength ? sql : sql[..maxSqlLength] + " /* truncated */");
+        }
         var payload = fields.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value);
         payload["protocolVersion"] = 1; payload["operation"] = operation;
         var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
