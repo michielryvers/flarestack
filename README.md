@@ -123,7 +123,7 @@ local ports and state. Raw Alchemy bypasses telemetry collection.
 
 Local Aspire orchestration, fast mode and container fidelity mode are implemented.
 The hosting package uses Aspire executable resources, with endpoints, health checks, dependencies and standard resource
-commands. Templates, production authentication hardening,
+commands. Production authentication hardening,
 cloud secrets/state verification, and deployment integration remain future work.
 
 ## Framework and sample boundary
@@ -146,7 +146,7 @@ mode returns no host application resource. Apps expose `/health` and use the
 standard Flarestack account routes and OIDC callback paths.
 
 The sample consumes locally packed NuGet packages and an npm tarball; templates
-are the next step.
+are available through `dotnet new flarestack-blazor`.
 The legacy stack name `flarestack-compatibility` and resource IDs remain stable to
 preserve state. For an existing checkout, stop Aspire and move
 `spikes/compatibility/infra/.alchemy` to `samples/Todo/infra/.alchemy` **before**
@@ -173,7 +173,8 @@ package carries its `_content/Flarestack.Authentication/sign-in.js` browser asse
 After editing framework code, stop Aspire, run `bun run prepare:local`, then start
 Aspire again. Ordinary Todo edits still use hot reload. Preparation rejects a
 running AppHost and refreshes only the repository's own local-preview NuGet cache
-plus the sample tarball installation. NuGet's cache is isolated in `.packages/nuget`.
+plus the sample tarball installation. Tarball filenames include a content hash
+to prevent Bun from reusing stale bytes when the local-preview version is rebuilt. NuGet's cache is isolated in `.packages/nuget`.
 The bootstrap dependency install uses the root lockfile; the sample has its own
 lockfile, refreshed when packing changes the tarball.
 
@@ -185,4 +186,39 @@ an existing receiver, set `OTEL_EXPORTER_OTLP_ENDPOINT` (and headers if needed).
 This is a local preview with pinned dependencies. Keep the NuGet versions in
 `Directory.Packages.props` and `src/Directory.Build.props` aligned with the npm
 manifest and tarball paths when changing the preview version. Published immutable
-versions, a license decision, a release policy and templates remain separate work.
+versions, a license decision and a release policy remain separate work.
+
+## Blazor template
+
+`bun run prepare:local` also stages and packs `Flarestack.Templates` from the tested
+sample. It carries the three local NuGet packages and npm tarball, so generated
+apps do not reference this repository or require unpublished packages from a registry.
+
+```sh
+dotnet new install ./artifacts/templates/Flarestack.Templates.0.1.0-local.1.nupkg
+dotnet new flarestack-blazor -n MyApp
+cd MyApp
+bun install --frozen-lockfile
+aspire run
+```
+
+The generated solution includes the AppHost, Web and ServiceDefaults projects,
+D1 migrations, Alchemy infrastructure, a locked Bun manifest, browser tests and
+telemetry verification. Stack/client names are derived from the app name, C# names
+are normalized consistently, and user-secrets IDs are regenerated. Local state,
+credentials, build outputs and node_modules are excluded. The generated README
+covers fast/container modes and default-port conflicts; stop the original sample
+before running a generated app on the same ports.
+
+To test generation, run `bun run test:template` after preparation. This replaces
+the installed local Flarestack template and checks normal and dotted/hyphenated
+names, package integrity and fresh secrets IDs. If manually reinstalling a rebuilt
+archive at the same preview version, first run
+`dotnet new uninstall Flarestack.Templates`; the pinned SDK can otherwise retain
+duplicate registrations even with `--force`.
+
+Edit the sample for shared application changes. `scripts/stage-template.ts`
+assembles a clean staging tree in `artifacts/template/content`; template-specific
+metadata and instructions live under `templates/Flarestack.Templates/content`.
+Generated apps retain their bundled `artifacts` packages in source control during
+this local preview. No template post-action publishes or deploys anything.

@@ -3,6 +3,7 @@ import { Action } from "alchemy";
 import { CurrentRuntimeContext } from "alchemy/RuntimeContext";
 import { Database } from "@alchemy.run/better-auth/Database";
 import { betterAuth } from "better-auth";
+import { getSchema } from "better-auth/db";
 import { getMigrations } from "better-auth/db/migration";
 import * as Effect from "effect/Effect";
 import { authOptions, type OAuthClientOptions } from "./auth-options.ts";
@@ -12,7 +13,7 @@ export const provisionClient = (origin: string, client: OAuthClientOptions): Eff
   const support = db.migrate!;
   const Ensure = Action("Flarestack.OAuthClient", Effect.gen(function* () {
     const acquire = yield* support.connect;
-    return (_input: { identity: Record<string, unknown>; origin: string; revision: number; client: OAuthClientOptions }) => Effect.scoped(Effect.gen(function* () {
+    return (_input: { identity: Record<string, unknown>; origin: string; revision: number; schema: string; client: OAuthClientOptions }) => Effect.scoped(Effect.gen(function* () {
       const database = yield* acquire;
       yield* Effect.promise(async () => {
         const options = { ...authOptions(origin, client, true), database, secret: "provisioning-only-not-used-to-issue-tokens", telemetry: { enabled: false } };
@@ -43,7 +44,7 @@ export const provisionClient = (origin: string, client: OAuthClientOptions): Eff
       return { clientId: client.clientId };
     }));
   }));
-  const result = yield* Ensure(client.resourceId, { identity: support.identity, origin, client, revision: 2 });
+  const result = yield* Ensure(client.resourceId, { identity: support.identity, origin, client, revision: 3, schema: JSON.stringify(getSchema(authOptions(origin, client))) });
   const runtime = yield* CurrentRuntimeContext;
   if (runtime) yield* runtime.set(client.resourceId, result as never);
 }) as Effect.Effect<void, never, Database>;

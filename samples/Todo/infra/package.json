@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz",
+    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-0aa03774dc2ee1a6.tgz",
     "alchemy": "2.0.0-beta.79"
+  },
+  "patchedDependencies": {
+    "alchemy@2.0.0-beta.79": "../../../patches/alchemy@2.0.0-beta.79.patch"
   }
 }

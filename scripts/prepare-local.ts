@@ -1,4 +1,4 @@
-import { mkdir, rm, readFile } from "node:fs/promises";
+import { mkdir, rm, readFile, writeFile, copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { LocalLogs, readLines } from "../src/alchemy/local/logs.ts";
 
@@ -56,7 +56,17 @@ try {
     await rm(resolve(root, ".packages/nuget", name.toLowerCase(), "0.1.0-local.1"), { recursive: true, force: true });
   }
   await run(["bun", "pm", "pack", "--filename", resolve(root, "artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz"), "--ignore-scripts"], resolve(root, "src/alchemy"));
+  // Bun's --no-cache skips manifest caches, but can still reuse a locked local
+  // tarball. Give every distinct archive a distinct path to invalidate it reliably.
+  const archive = resolve(root, "artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz");
+  const digest = new Bun.CryptoHasher("sha256").update(await readFile(archive)).digest("hex").slice(0, 16);
+  const filename = `flarestack-alchemy-0.1.0-local.1-${digest}.tgz`;
+  await copyFile(archive, resolve(root, "artifacts/npm", filename));
   const sample = resolve(root, "samples/Todo/infra");
+  const manifestPath = resolve(sample, "package.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.dependencies["@flarestack/alchemy"] = `file:../../../artifacts/npm/${filename}`;
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   await rm(resolve(sample, "node_modules/@flarestack/alchemy"), { recursive: true, force: true });
   await run(["bun", "install", "--force", "--no-cache"], sample);
   // Catch stale tarball/cache resolution before launching the app.
@@ -65,7 +75,9 @@ try {
       throw new Error(`Installed package does not match packed source: ${path}`);
   }
   await run(["dotnet", "restore", "Flarestack.slnx", "--force", "--no-cache", "--nologo"]);
-  logs.emit("flarestack.packages", "Local packages installed and sample restored");
+  await run(["bun", "scripts/stage-template.ts"]);
+  await run(["dotnet", "pack", "templates/Flarestack.Templates/Flarestack.Templates.csproj", "-o", "artifacts/templates", "--nologo"]);
+  logs.emit("flarestack.packages", "Local packages and template ready");
   console.log("Local packages ready. Start the Todo AppHost with aspire run.");
 } catch (error) {
   logs.emit("flarestack.packages", String(error), "stderr");

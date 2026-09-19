@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Flarestack contributors",
+  "classifications": [
+    "Web",
+    "Blazor",
+    "Aspire",
+    "Cloudflare"
+  ],
+  "identity": "Flarestack.Blazor.CSharp",
+  "name": "Flarestack Blazor app (local preview)",
+  "shortName": "flarestack-blazor",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "solution"
+  },
+  "guids": [
+    "1709b865-a1ba-4d20-8b74-0482bc3feb4c"
+  ],
+  "symbols": {
+    "slugParts": {
+      "type": "generated",
+      "generator": "regex",
+      "parameters": {
+        "source": "name",
+        "steps": [
+          {
+            "regex": "[^a-zA-Z0-9]+",
+            "replacement": "-"
+          }
+        ]
+      }
+    },
+    "slug": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": {
+        "source": "slugParts",
+        "toLower": true
+      },
+      "replaces": "TemplateSlug"
+    },
+    "projectName": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "safe_namespace",
+      "replaces": "FlarestackTemplate",
+      "fileRename": "FlarestackTemplate"
+    }
+  },
+  "sources": [
+    {
+      "copyOnly": [
+        "artifacts/**/*",
+        "**/*.png"
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    {
+      "path": "FlarestackTemplate.slnx"
+    }
+  ]
+}

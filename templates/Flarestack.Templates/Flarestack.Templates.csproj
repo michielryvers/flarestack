@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Flarestack.Templates</PackageId>
+    <Version>0.1.0-local.1</Version>
+    <Authors>Flarestack contributors</Authors>
+    <Description>Local Flarestack Blazor starter with Aspire, Better Auth and D1.</Description>
+    <PackageType>Template</PackageType>
+    <PackageTags>dotnet-new;templates;blazor;aspire</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <NoBuild>true</NoBuild>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="../../artifacts/template/content/**/*" Pack="true" PackagePath="content/" />
+    <None Include="README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+  <Target Name="RequireStagedTemplate" BeforeTargets="GenerateNuspec">
+    <Error Condition="!Exists('../../artifacts/template/content/.template.config/template.json')" Text="Run bun run prepare:local to stage and pack the template." />
+  </Target>
+</Project>

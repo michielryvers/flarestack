@@ -1,0 +1,20 @@
+diff --git a/src/Apply.ts b/src/Apply.ts
+index 4e056c4e52c2a6f9b4d8ed08bb35d900171c4d07..0cf750712f2ebe6f38a44cac477bb267cbc2cb67 100644
+--- a/src/Apply.ts
++++ b/src/Apply.ts
+@@ -747,13 +747,14 @@ const executeNode = (
+           `removal policy ${node.state.removalPolicy} → ${node.resource.RemovalPolicy}`,
+         );
+       }
+-      yield* signalReadyStable;
+       yield* storeAndSignal({
+         output: node.state.attr,
+         props: node.state.props,
+         bindings: node.state.bindings ?? [],
+         instanceId: node.state.instanceId,
+       });
++      // Stable consumers must see the persisted output before they wake.
++      yield* signalReadyStable;
+       return;
+     }
+ 

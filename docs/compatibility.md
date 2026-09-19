@@ -244,3 +244,41 @@ logs/traces with SQL text. The npm tarball was byte-identical across repeated bu
 The package-preparation processes export logs to a temporary standalone Aspire
 receiver because package bootstrap happens before the AppHost can be built.
 Publishing, licensing and release policy remain outside this local preview.
+
+## Template and fresh-database bootstrap (2026-09-19)
+
+The `Flarestack.Templates` package generates a standalone app with bundled local
+framework packages, normalized project names, a distinct stack/client identity,
+and a fresh user-secrets ID. Template assembly reuses the tested Todo sample;
+only metadata, generated-app instructions and layout transformations are maintained
+separately. Default ports match the sample, so run one AppHost at a time.
+
+Testing a newly generated app exposed previously masked bootstrap and upgrade issues:
+
+- The Better Auth integration's migration action and Flarestack's client action
+  independently computed schema migrations, then raced to create tables in an empty
+  D1 database. Flarestack now disables the integration's competing migration action
+  and owns migration followed by client provisioning in one action. Its inputs
+  include the auth schema so schema changes invalidate the action.
+- Bun's `--no-cache` skips manifest caches but did not invalidate a locked local
+  tarball at an unchanged path. Package preparation now uses a content hash in the
+  tarball filename and updates the sample manifest/lockfile. Installed runtime files
+  are still checked against their source before preparation succeeds.
+
+The pinned Alchemy `2.0.0-beta.79` also signaled an unchanged resource as stable
+before storing its outputs. A newly invalidated migration action could then fail
+with `MissingSourceError` against an existing database. The small Bun patch in
+`patches/` stores outputs before waking stable consumers. Root, sample and generated
+app manifests apply the same patch during install. Keep it until the upstream
+version includes this ordering fix; it does not modify database contents or state.
+
+The pinned .NET template engine can also retain duplicate registrations when
+reinstalling a rebuilt preview nupkg with `--force`. Uninstall `Flarestack.Templates`
+before reinstalling the same preview version; `bun run test:template` does this.
+
+Template verification covers normal and dotted/hyphenated names, unchanged binary
+package payloads, regenerated secrets IDs, and extensionless files (`Dockerfile`
+and `.gitignore`). A named solution compiled with zero warnings/errors. Generated
+apps outside the repository passed fast-mode hot reload and browser E2E, and a
+second app started directly in container mode on an empty D1 database and passed
+browser E2E and Aspire log/trace checks, including SQL spans.

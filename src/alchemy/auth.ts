@@ -21,7 +21,9 @@ export function createAuthWorker(options: AuthWorkerOptions) {
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
   }, Effect.gen(function* () {
     const publicOrigin = yield* Config.String("PUBLIC_ORIGIN");
-    const auth = yield* BetterAuth(authOptions(publicOrigin, options.client));
+    // One action owns schema migration followed by client provisioning. Separate
+    // Alchemy actions run concurrently and race CREATE TABLE on a fresh D1.
+    const auth = yield* BetterAuth({ ...authOptions(publicOrigin, options.client), migrate: false });
     if (!globalThis.__ALCHEMY_RUNTIME__) {
       const { provisionClient } = yield* Effect.promise(() => import("./provision-client.ts"));
       yield* provisionClient(publicOrigin, options.client);
