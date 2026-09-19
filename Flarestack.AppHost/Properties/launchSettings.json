@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://127.0.0.1:18888",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
+        "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "http://127.0.0.1:4317",
+        "ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL": "http://127.0.0.1:4318",
+        "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "http://127.0.0.1:18889"
+      }
+    }
+  }
+}

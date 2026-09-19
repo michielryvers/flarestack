@@ -1,0 +1,43 @@
+{
+  "name": "flarestack",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "bun test spikes/compatibility src/alchemy",
+    "dev:spike": "bun spikes/compatibility/local/dev.ts",
+    "dev:spike:raw": "cd spikes/compatibility/infra && alchemy dev",
+    "verify:telemetry": "bun spikes/compatibility/local/verify.ts",
+    "dev": "aspire run",
+    "test:e2e": "playwright test",
+    "build:auth-ui": "bun build src/Flarestack.Authentication/browser/sign-in.ts --target browser --minify --outfile src/Flarestack.Authentication/wwwroot/sign-in.js",
+    "dev:container": "Flarestack__LocalMode=Container aspire run",
+    "dev:standalone": "bun spikes/compatibility/local/dev.ts",
+    "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test",
+    "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload"
+  },
+  "dependencies": {
+    "@alchemy.run/better-auth": "2.0.0-beta.79",
+    "@better-auth/oauth-provider": "1.7.5",
+    "@cloudflare/containers": "0.3.7",
+    "@effect/platform-bun": "4.0.0-rc.116",
+    "@effect/platform-node": "4.0.0-rc.116",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/core": "2.11.0",
+    "@opentelemetry/otlp-transformer": "0.222.0",
+    "@opentelemetry/sdk-trace-base": "2.11.0",
+    "alchemy": "2.0.0-beta.79",
+    "better-auth": "1.7.5",
+    "better-call": "1.4.0",
+    "effect": "4.0.0-rc.116"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260919.1",
+    "@opentelemetry/exporter-logs-otlp-proto": "0.222.0",
+    "@opentelemetry/resources": "2.11.0",
+    "@opentelemetry/sdk-logs": "0.222.0",
+    "@playwright/test": "1.63.0",
+    "@types/bun": "1.4.2",
+    "typescript": "7.0.2"
+  }
+}

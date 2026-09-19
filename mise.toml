@@ -1,0 +1,6 @@
+[tools]
+dotnet = "10.0.401"
+
+# Keep the selected SDK ahead of a system runtime-only dotnet executable.
+[settings]
+activate_aggressive = true
