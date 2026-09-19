@@ -42,9 +42,11 @@ test.each([
     expect(await Bun.file(join(directory, config.appHost.path)).exists()).toBe(true);
     const manifest = await Bun.file(join(directory, "package.json")).json();
     expect(manifest.name).toBe(`app-${slug}`);
+    expect(await readFile(join(directory, "infra/auth.ts"), "utf8")).toContain("adminUserIds: []");
+    expect(await Bun.file(join(directory, "docs/accounts-and-email.md")).exists()).toBe(true);
     for (const patch of Object.values(manifest.patchedDependencies) as string[])
       expect(await readFile(join(directory, patch))).toEqual(await readFile(join(root, patch)));
-    for (const path of [manifest.dependencies["@flarestack/alchemy"].replace("file:artifacts/", ""), "nuget/Flarestack.D1.0.1.0-local.1.nupkg", "nuget/Flarestack.Authentication.0.1.0-local.1.nupkg", "nuget/Aspire.Hosting.Flarestack.0.1.0-local.1.nupkg"])
+    for (const path of [manifest.dependencies["@flarestack/alchemy"].replace("file:artifacts/", ""), "nuget/Flarestack.D1.0.1.0-local.1.nupkg", "nuget/Flarestack.Email.0.1.0-local.1.nupkg", "nuget/Flarestack.Authentication.0.1.0-local.1.nupkg", "nuget/Aspire.Hosting.Flarestack.0.1.0-local.1.nupkg"])
       expect(await readFile(join(directory, "artifacts", path))).toEqual(await readFile(join(root, "artifacts", path)));
     expect(await readdir(join(directory, "infra"))).not.toContain(".alchemy");
     expect(await readdir(directory)).not.toContain(".template.config");

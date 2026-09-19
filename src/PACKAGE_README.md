@@ -4,6 +4,7 @@ These .NET 10 packages are built for local evaluation with the Todo sample.
 
 - `Flarestack.D1`: parameterized queries and batches through the internal D1 bridge.
 - `Flarestack.Authentication`: ASP.NET cookie/OIDC integration and the browser sign-in asset.
+- `Flarestack.Email`: private Worker-backed sending with local capture and tracing.
 - `Aspire.Hosting.Flarestack`: Alchemy process supervision and fast/container local modes.
 
 Use matching `0.1.0-local.1` versions alongside `@flarestack/alchemy`. The compatibility

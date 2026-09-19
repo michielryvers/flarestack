@@ -1,5 +1,6 @@
 using Flarestack.Authentication;
 using Flarestack.D1;
+using Flarestack.Email;
 using Microsoft.AspNetCore.HttpOverrides;
 using Todo.Web;
 using Todo.Web.Components;
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddFlarestackD1(builder.Configuration);
+builder.Services.AddFlarestackEmail(builder.Configuration);
 builder.Services.AddFlarestackAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<TodoRepository>();
 builder.Services.Configure<ForwardedHeadersOptions>(options => {

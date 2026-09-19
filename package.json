@@ -14,7 +14,9 @@
     "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test",
     "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload",
     "prepare:local": "bun scripts/prepare-local.ts",
-    "test:template": "bun test scripts/template.test.ts"
+    "test:template": "bun test scripts/template.test.ts",
+    "configure:local": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/configure.ts samples/Todo/local.json",
+    "doctor": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/doctor.ts samples/Todo/local.json"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",
@@ -41,6 +43,7 @@
     "typescript": "7.0.2"
   },
   "patchedDependencies": {
-    "alchemy@2.0.0-beta.79": "patches/alchemy@2.0.0-beta.79.patch"
+    "alchemy@2.0.0-beta.79": "patches/alchemy@2.0.0-beta.79.patch",
+    "@alchemy.run/cloudflare-runtime@2.0.0-beta.79": "patches/cloudflare-runtime@2.0.0-beta.79.patch"
   }
 }

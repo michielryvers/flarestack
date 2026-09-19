@@ -1,7 +1,7 @@
 # @flarestack/alchemy
 
 Local preview of Flarestack infrastructure and its Aspire-supervised runtime.
-Exports `FlarestackApp`, `createAuthWorker`, the Worker/container entrypoint,
+Exports `FlarestackApp`, `createAuthWorker`, `createEmailWorker`, the Worker/container entrypoint,
 and local configuration/supervisor/watch entrypoints.
 
 This package ships TypeScript for Bun and Alchemy's Worker bundler. It is not a

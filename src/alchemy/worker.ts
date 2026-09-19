@@ -1,4 +1,4 @@
-import { tracedRequest } from "./tracing.ts";
+import { tracedRequest, telemetryPath } from "./tracing.ts";
 import { Container, getContainer } from "@cloudflare/containers";
 import type { D1Database } from "@cloudflare/workers-types";
 import { d1Commands } from "./d1-bridge.ts";
@@ -7,6 +7,7 @@ import { route } from "./router.ts";
 export interface FlarestackWorkerEnv {
   Database: D1Database;
   Auth: { fetch(request: Request): Promise<Response> };
+  Email?: { fetch(request: Request): Promise<Response> };
   DotNet?: Parameters<typeof getContainer>[0];
   LOCAL_ORIGIN?: string;
   CONTAINER_ENV: Record<string, string>;
@@ -24,13 +25,14 @@ export class DotNet extends Container<Env> {
 }
 // Assignment invokes the SDK registry setter; a static field would shadow it.
 DotNet.outboundByHost = {
+  "email.internal": (request: Request, env: Env) => env.Email ? env.Email.fetch(request) : Promise.resolve(new Response(null, {status: 503})),
   "d1.internal": (request: Request, env: Env) => tracedRequest("flarestack.d1", request, req => d1Commands(req, env.Database), env),
   "auth.internal": (request: Request, env: Env) => tracedRequest("flarestack.auth-backchannel", request, req => env.Auth.fetch(req), env),
 };
 export default {
   async fetch(request: Request, env: Env) {
     const started = performance.now();
-    const path = new URL(request.url).pathname;
+    const path = telemetryPath(new URL(request.url).pathname);
     try {
       const response = await tracedRequest("flarestack.worker", request, traced => route(traced, req => env.Auth.fetch(req), req => {
         if (env.LOCAL_ORIGIN) {

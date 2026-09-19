@@ -1,0 +1,16 @@
+@page "/account/forgot-password"
+@page "/account/reset-password"
+@inject NavigationManager Navigation
+<PageTitle>Password recovery</PageTitle>
+<section class="auth-card">
+    <h1>@(Reset ? "Choose a new password" : "Forgot your password?")</h1>
+    <form id="recovery-form" data-enhance="false">
+        @if (Reset) { <label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></label> }
+        else { <label>Email<input name="email" type="email" autocomplete="email" required /></label> }
+        <button type="submit">@(Reset ? "Reset password" : "Send reset link")</button>
+    </form>
+    <p id="recovery-status" role="status"></p>
+    <a href="/account/login" data-enhance-nav="false">Back to sign in</a>
+</section>
+<script type="module" src="_content/Flarestack.Authentication/sign-in.js"></script>
+@code { private bool Reset => new Uri(Navigation.Uri).AbsolutePath == "/account/reset-password"; }

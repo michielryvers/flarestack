@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Flarestack.D1" />
+    <PackageReference Include="Flarestack.Email" /><PackageReference Include="Flarestack.D1" />
     <PackageReference Include="Flarestack.Authentication" />
   </ItemGroup>
   <ItemGroup><ProjectReference Include="../Todo.ServiceDefaults/Todo.ServiceDefaults.csproj" /></ItemGroup>

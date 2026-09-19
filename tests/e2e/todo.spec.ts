@@ -1,20 +1,9 @@
+import {inboxUrl, origin} from "./local.ts";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const exec = promisify(execFile);
 import { test, expect, type Page } from "@playwright/test";
-const password = "Local-test-only!123";
-async function signUp(page: Page, email: string) {
- await page.goto("/");
- await page.getByRole("link", {name:"Open my workspace"}).click();
- await expect(page.locator("#sign-in-form")).toBeVisible();
- await page.getByLabel("Email", {exact:true}).fill(email);
- await page.getByLabel("Password", {exact:true}).fill(password);
- await page.getByLabel("Create a new account").check();
- await page.getByRole("button", {name:"Continue"}).click();
- await expect.poll(() => new URL(page.url()).pathname).toBe("/todos");
- await expect(page.getByRole("heading", {name:"One thing at a time."})).toBeVisible();
- await expect(page.getByText(email, {exact:true})).toBeVisible();
-}
+import {signUp} from "./accounts.ts";
 test("real OIDC, Blazor WebSocket CRUD, logout and two-user isolation", async ({browser}) => {
  const alice = await browser.newContext(); const page = await alice.newPage();
  const sockets: string[] = []; page.on("websocket", socket => sockets.push(socket.url()));
@@ -35,6 +24,17 @@ test("real OIDC, Blazor WebSocket CRUD, logout and two-user isolation", async ({
  await expect(second.getByRole("button",{name:"Add task",exact:true})).toBeEnabled();
  await second.getByLabel("New task").fill("Bob's task"); await second.getByRole("button",{name:"Add task",exact:true}).click();
  await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
+ await page.goto("/account/settings");
+ await page.getByRole("button", {name:"Send me a test email"}).click();
+ await expect(page.getByRole("status")).toContainText("Email accepted");
+ const inbox = inboxUrl;
+ await expect.poll(async () => {
+   const messages = await (await fetch(inbox + "/messages")).json() as {to:string;subject:string;text:string}[];
+   return messages.some(m => m.to === `alice-${suffix}@example.test` && m.subject === "Hello from Flarestack" && m.text.includes("transport is working"));
+ }).toBe(true);
+ expect((await fetch(inbox + "/messages", {headers:{origin:"https://evil.example"}})).status).toBe(403);
+ expect((await page.request.post("/v1/email", {data:{to:"evil@example.com",subject:"No",text:"No"}})).status()).not.toBe(202);
+ await page.goto("/todos");
  // Restart only this stack's application container, never unrelated containers.
  if (process.env.FLARESTACK_TEST_MODE !== "Container") {
    await exec("aspire", ["resource", "todo", "restart", "--non-interactive"]);
@@ -44,7 +44,7 @@ test("real OIDC, Blazor WebSocket CRUD, logout and two-user isolation", async ({
    const apps = stdout.trim().split("\n").filter(line => !line.endsWith("-proxy"));
    expect(apps).toHaveLength(1);
    await exec("docker", ["restart", apps[0]!.split(" ")[0]!]);
-   await expect.poll(async () => { try { return (await fetch("http://localhost:8787/health")).status; } catch { return 0; } }).toBe(200);
+   await expect.poll(async () => { try { return (await fetch(origin + "/health")).status; } catch { return 0; } }).toBe(200);
  }
  await second.reload(); await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
  await page.reload(); await expect(page.getByText("Keep this task private",{exact:true})).toBeVisible();

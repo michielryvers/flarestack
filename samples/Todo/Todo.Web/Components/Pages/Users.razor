@@ -1,0 +1,62 @@
+@page "/admin/users"
+@using Flarestack.Authentication
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "admin")]
+@rendermode InteractiveServer
+@inject IUserAdministration Administration
+@inject AuthenticationStateProvider Authentication
+<PageTitle>User administration</PageTitle>
+<AuthorizeView Roles="admin">
+<Authorized>
+<section class="workspace">
+    <h1>User administration</h1>
+    <form @onsubmit="Search" @onsubmit:preventDefault>
+        <label>Find exact email <input @bind="search" @bind:event="oninput" disabled="@(!interactive)" /></label><button disabled="@(busy || !interactive)">Search</button>
+    </form>
+    <p role="status">@status</p>
+    @if (result is not null) {
+        <p>@result.Total users</p>
+        <div class="admin-table-scroll" tabindex="0" aria-label="User list"><table class="admin-table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        @foreach (var user in result.Users.Where(u => u.Id != "flarestack-provisioner")) {
+            <tr @key="user.Id"><td>@user.Email</td><td>@user.Name</td><td>@user.Role</td><td>@(user.Banned ? "Disabled" : "Active")</td>
+            <td><button disabled="@(busy || !interactive)" @onclick='() => Change(user, user.Banned ? "enable" : "disable")' >@(user.Banned ? "Enable" : "Disable")</button>
+                <button disabled="@(busy || !interactive)" @onclick='() => Change(user, "revoke")' >Revoke sessions</button>
+                <button disabled="@(busy || !interactive)" @onclick='() => Change(user, "role")' >@(user.Role == "admin" ? "Make user" : "Make admin")</button></td></tr>
+        }
+        </tbody></table></div>
+        <button disabled="@(busy || !interactive || offset == 0)" @onclick="Previous">Previous</button>
+        <button disabled="@(busy || !interactive || offset + 50 >= result.Total)" @onclick="Next">Next</button>
+    }
+</section>
+</Authorized>
+<NotAuthorized><section class="auth-card"><h1>Session or permissions changed</h1><a href="/account/login" data-enhance-nav="false">Sign in again</a></section></NotAuthorized>
+</AuthorizeView>
+@code {
+    private UserPage? result;
+    private string search = "", status = "";
+    private int offset;
+    private bool busy, interactive;
+    protected override void OnAfterRender(bool firstRender) { if (firstRender) { interactive = true; StateHasChanged(); } }
+    protected override Task OnInitializedAsync() => Load();
+    private async Task Load() {
+        busy = true;
+        try { result = await Administration.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, search, offset); }
+        catch { status = "Unable to load users. Your session or permissions may have changed."; }
+        finally { busy = false; }
+    }
+    private Task Search() { offset = 0; return Load(); }
+    private Task Previous() { offset = Math.Max(0, offset - 50); return Load(); }
+    private Task Next() { offset += 50; return Load(); }
+    private async Task Change(AdminUser user, string operation) {
+        busy = true; status = "";
+        try {
+            var actor = (await Authentication.GetAuthenticationStateAsync()).User;
+            if (operation == "revoke") await Administration.RevokeSessionsAsync(actor, user.Id);
+            else if (operation == "role") await Administration.SetRoleAsync(actor, user.Id, user.Role == "admin" ? "user" : "admin");
+            else await Administration.SetDisabledAsync(actor, user.Id, operation == "disable");
+            status = "User updated.";
+        } catch { status = "Change refused. Check your permissions; your own account and bootstrap administrators are protected."; }
+        finally { busy = false; }
+        await Load();
+    }
+}

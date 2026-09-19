@@ -32,3 +32,10 @@ describe("public routing boundary", () => {
     expect(request.headers.has("forwarded")).toBe(false);
   });
 });
+
+test("readiness waits for auth while internal operations remain private", async () => {
+  const ready = (status: number) => route(new Request("http://localhost/_flarestack/ready"), async()=>new Response(null,{status}), async()=>{throw new Error("unexpected app");});
+  expect((await ready(502)).status).toBe(503);
+  expect((await ready(200)).status).toBe(200);
+  expect((await route(new Request("http://localhost/_flarestack/internal/users"),async()=>{throw new Error("public auth dispatch");},async()=>{throw new Error("public app dispatch");})).status).toBe(404);
+});

@@ -35,6 +35,8 @@ public static class FlarestackHosting
         if (!origin.IsLoopback || origin.Scheme != "http" || origin.AbsolutePath != "/" || origin.Query.Length > 0 || origin.UserInfo.Length > 0 || origin.Fragment.Length > 0)
             throw new InvalidOperationException("Local publicOrigin must be a loopback HTTP origin.");
         if (bridgePort is < 1 or > 65535 || bridgePort == origin.Port) throw new InvalidOperationException("Invalid bridgePort.");
+        var inboxPort = config.RootElement.TryGetProperty("inboxPort", out var inbox) ? inbox.GetInt32() : 8810;
+        if (inboxPort is < 1 or > 65535 || inboxPort == bridgePort || inboxPort == origin.Port) throw new InvalidOperationException("Invalid inboxPort.");
         var root = Path.GetFullPath(Required("buildRoot"), directory);
         var project = Path.GetFullPath(Required("project"), directory);
         foreach (var path in new[] { project, Path.Combine(runtime, "dev.ts"), Path.Combine(runtime, "watch-dotnet.ts"), Path.Combine(directory, Required("infrastructureDirectory"), "alchemy.run.ts") })
@@ -45,7 +47,8 @@ public static class FlarestackHosting
             .WithEnvironment("FLARESTACK_LOCAL_MODE", options.Mode.ToString())
             .WithEnvironment("FLARESTACK_LOCAL_BRIDGE_TOKEN", token)
             .WithHttpEndpoint(port: origin.Port, targetPort: origin.Port, name: "http", isProxied: false)
-            .WithHttpHealthCheck("/_flarestack/health")
+            .WithHttpEndpoint(port: inboxPort, targetPort: inboxPort, name: "inbox", isProxied: false)
+            .WithHttpHealthCheck("/_flarestack/ready", endpointName: "http")
             .WithOtlpExporter(OtlpProtocol.HttpProtobuf);
         IResourceBuilder<ExecutableResource>? app = null;
         if (options.Mode == FlarestackLocalMode.Fast)
@@ -54,7 +57,9 @@ public static class FlarestackHosting
             app = builder.AddExecutable(options.ApplicationName, "bun", root, Path.Combine(runtime, "watch-dotnet.ts"), project)
                 .WithHttpEndpoint(name: "http", isProxied: false)
                 .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+                .WithEnvironment("Flarestack__Authentication__Authority", origin.GetLeftPart(UriPartial.Authority) + "/auth")
                 .WithEnvironment("Flarestack__D1__BaseAddress", platform.GetEndpoint("bridge"))
+                .WithEnvironment("Flarestack__Email__BaseAddress", platform.GetEndpoint("bridge"))
                 .WithEnvironment("Flarestack__Authentication__BackchannelBaseAddress", platform.GetEndpoint("bridge"))
                 .WithEnvironment("Flarestack__LocalBridgeToken", token)
                 .WithOtlpExporter(OtlpProtocol.HttpProtobuf)

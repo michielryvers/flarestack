@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Flarestack.Email" Version="0.1.0-local.1" />
     <PackageVersion Include="Flarestack.D1" Version="0.1.0-local.1" />
     <PackageVersion Include="Flarestack.Authentication" Version="0.1.0-local.1" />
     <PackageVersion Include="Aspire.Hosting.Flarestack" Version="0.1.0-local.1" />

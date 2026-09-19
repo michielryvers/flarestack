@@ -32,8 +32,10 @@ async function copyTree(from: string, to: string) {
 for (const project of ["Todo.Web", "Todo.ServiceDefaults"]) await copyTree(`samples/Todo/${project}`, transform(project));
 await copyTree("Flarestack.AppHost", "FlarestackTemplate.AppHost");
 await copyTree("samples/Todo/migrations", "migrations");
-for (const file of ["alchemy.run.ts", "auth.ts", "config.ts", "worker.ts"]) {
-  await emit(`infra/${file}`, transform(await readFile(resolve(root, "samples/Todo/infra", file), "utf8")));
+for (const file of ["alchemy.run.ts", "auth.ts", "config.ts", "worker.ts", "email.ts"]) {
+  let source = transform(await readFile(resolve(root, "samples/Todo/infra", file), "utf8"));
+  if (file === "auth.ts") source = source.replace(/adminUserIds:\s*\[[^\]]*\]/g, "adminUserIds: []");
+  await emit(`infra/${file}`, source);
 }
 for (const file of ["Directory.Build.props", "Directory.Packages.props", "global.json", "NuGet.Config", "mise.toml", "playwright.config.ts"])
   await emit(file, await readFile(resolve(root, file), "utf8"));
@@ -49,7 +51,7 @@ const host = transform(await readFile(resolve(root, "Flarestack.AppHost/AppHost.
 await emit("FlarestackTemplate.AppHost/AppHost.cs", host);
 await emit("aspire.config.json", JSON.stringify({ appHost: { path: "FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" } }, null, 2));
 await emit("FlarestackTemplate.slnx", '<Solution>\n  <Project Path="FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" />\n  <Project Path="FlarestackTemplate.Web/FlarestackTemplate.Web.csproj" />\n  <Project Path="FlarestackTemplate.ServiceDefaults/FlarestackTemplate.ServiceDefaults.csproj" />\n</Solution>\n');
-for (const file of ["todo.spec.ts", "hot-reload.spec.ts", "verify-telemetry.ts"]) {
+for (const file of ["todo.spec.ts", "accounts.ts", "local.ts", "accounts.spec.ts", "admin.spec.ts", "hot-reload.spec.ts", "verify-telemetry.ts"]) {
   const source = await readFile(resolve(root, "tests/e2e", file), "utf8");
   await emit(`tests/e2e/${file}`, transform(source)
     .replaceAll('"todo",', '"app",').replaceAll("workerd-flarestack-compatibility-", "workerd-app-TemplateSlug-")
@@ -66,12 +68,13 @@ infra.patchedDependencies = repo.patchedDependencies;
 for (const patch of Object.values(repo.patchedDependencies) as string[]) {
   await emit(patch, await readFile(resolve(root, patch), "utf8"));
 }
-infra.scripts = { dev: "aspire run", "dev:container": "Flarestack__LocalMode=Container aspire run", "test:e2e": "playwright test", "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test todo.spec.ts", "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload", "verify:telemetry": "bun tests/e2e/verify-telemetry.ts" };
+infra.scripts = { "configure:local": "bun node_modules/@flarestack/alchemy/local/configure.ts local.json", doctor: "bun node_modules/@flarestack/alchemy/local/doctor.ts local.json", dev: "aspire run", "dev:container": "Flarestack__LocalMode=Container aspire run", "test:e2e": "playwright test", "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test", "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload", "verify:telemetry": "bun tests/e2e/verify-telemetry.ts" };
 await emit("package.json", JSON.stringify(infra, null, 2) + "\n");
 await emit(".gitignore", "**/bin/\n**/obj/\nnode_modules/\n.alchemy/\n.packages/\n.env\n.env.*\n*.user\ntest-results/\nplaywright-report/\n");
 await emit("AGENTS.md", (await readFile(resolve(root, "AGENTS.md"), "utf8")).replaceAll("local Todo app", "local app"));
 await cp(resolve(root, "templates/Flarestack.Templates/content"), output, { recursive: true });
-for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Aspire.Hosting.Flarestack"]) {
+for (const file of ["accounts-and-email.md", "upgrading.md"]) await emit(`docs/${file}`, (await readFile(resolve(root, "docs", file), "utf8")).replaceAll("samples/Todo/", ""));
+for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
   const file = `${name}.0.1.0-local.1.nupkg`;
   await mkdir(resolve(output, "artifacts/nuget"), { recursive: true });
   await cp(resolve(root, "artifacts/nuget", file), resolve(output, "artifacts/nuget", file));

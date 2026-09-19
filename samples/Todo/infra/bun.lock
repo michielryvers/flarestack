@@ -5,13 +5,14 @@
     "": {
       "name": "flarestack-todo-infra",
       "dependencies": {
-        "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-0aa03774dc2ee1a6.tgz",
+        "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-61e8dabca140f3b4.tgz",
         "alchemy": "2.0.0-beta.79",
       },
     },
   },
   "patchedDependencies": {
     "alchemy@2.0.0-beta.79": "../../../patches/alchemy@2.0.0-beta.79.patch",
+    "@alchemy.run/cloudflare-runtime@2.0.0-beta.79": "../../../patches/cloudflare-runtime@2.0.0-beta.79.patch",
   },
   "packages": {
     "@alchemy.run/better-auth": ["@alchemy.run/better-auth@2.0.0-beta.79", "", { "peerDependencies": { "@cloudflare/workers-types": "5.20260901.1", "@distilled.cloud/aws": "1.0.0-rc.12", "@neondatabase/serverless": "^1.0.1", "alchemy": "2.0.0-beta.79", "better-auth": "^1.6.2", "drizzle-orm": "1.0.0-rc.5-ab785fc", "effect": ">=4.0.0-rc.115 || >=4.0.0", "kysely": "^0.29.4", "mysql2": "^3.24.2", "pg": "^8.22.0" }, "optionalPeers": ["@cloudflare/workers-types", "@distilled.cloud/aws", "@neondatabase/serverless", "drizzle-orm", "kysely", "mysql2", "pg"] }, "sha512-hkmM0l1j18RBdJV82BsJiT38V2ijs5sFLRRD6kqsg01htARqDMjEq/hBgM139KNlP1UPSgRIK1psIRg66fqeyg=="],
@@ -144,7 +145,7 @@
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 
-    "@flarestack/alchemy": ["@flarestack/alchemy@../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-0aa03774dc2ee1a6.tgz", { "dependencies": { "@alchemy.run/better-auth": "2.0.0-beta.79", "@better-auth/oauth-provider": "1.7.5", "@cloudflare/containers": "0.3.7", "@cloudflare/workers-types": "5.20260919.1", "@effect/platform-bun": "4.0.0-rc.116", "@effect/platform-node": "4.0.0-rc.116", "@opentelemetry/api": "1.9.0", "@opentelemetry/core": "2.11.0", "@opentelemetry/exporter-logs-otlp-proto": "0.222.0", "@opentelemetry/otlp-transformer": "0.222.0", "@opentelemetry/resources": "2.11.0", "@opentelemetry/sdk-logs": "0.222.0", "@opentelemetry/sdk-trace-base": "2.11.0", "@types/bun": "1.4.2", "alchemy": "2.0.0-beta.79", "better-auth": "1.7.5", "better-call": "1.4.0", "effect": "4.0.0-rc.116" } }, "sha512-dAEx0Dwx9bQ9+kCxstmfnIyp1a2dSH+f1l79dERqbZV4VywgmzE//HLFwrlmzXAUWffQ4PpzLKMN24N4eiIoTw=="],
+    "@flarestack/alchemy": ["@flarestack/alchemy@../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-61e8dabca140f3b4.tgz", { "dependencies": { "@alchemy.run/better-auth": "2.0.0-beta.79", "@better-auth/oauth-provider": "1.7.5", "@cloudflare/containers": "0.3.7", "@cloudflare/workers-types": "5.20260919.1", "@effect/platform-bun": "4.0.0-rc.116", "@effect/platform-node": "4.0.0-rc.116", "@opentelemetry/api": "1.9.0", "@opentelemetry/core": "2.11.0", "@opentelemetry/exporter-logs-otlp-proto": "0.222.0", "@opentelemetry/otlp-transformer": "0.222.0", "@opentelemetry/resources": "2.11.0", "@opentelemetry/sdk-logs": "0.222.0", "@opentelemetry/sdk-trace-base": "2.11.0", "@types/bun": "1.4.2", "alchemy": "2.0.0-beta.79", "better-auth": "1.7.5", "better-call": "1.4.0", "effect": "4.0.0-rc.116" } }, "sha512-ezA7hIkxkx/0W8VZm8ks85/9hmnIuwutK3I1SjEOXTeiXFMITXS9LYYx3mnmMxz0Ktf6010uNVQOfzgR9sFyZQ=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.9", "", { "peerDependencies": { "hono": "^4" } }, "sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw=="],
 

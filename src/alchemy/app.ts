@@ -9,6 +9,7 @@ export interface FlarestackAppOptions {
   name: string;
   database: ReturnType<typeof Cloudflare.D1.Database>;
   auth: ReturnType<typeof createAuthWorker>;
+  email?: ReturnType<typeof import("./email.ts").createEmailWorker>;
   workerMain: string;
   container: { context: string; dockerfile: string; environment: Record<string, string> };
   local: { port: number; bridgePort: number };
@@ -29,7 +30,7 @@ export function FlarestackApp(options: FlarestackAppOptions) {
     context: options.container.context, dockerfile: options.container.dockerfile,
     className: "DotNet", ports: [{ name: "http", port: 8080 }], instanceType: "lite",
   });
-  const bindings = { Database: options.database, Auth: options.auth, ...telemetry };
+  const bindings = { Database: options.database, Auth: options.auth, ...(options.email ? { Email: options.email } : {}), ...telemetry };
   const LocalBridge = fast ? Cloudflare.Worker("LocalBridge", {
     main: `${import.meta.dirname}/local-bridge.ts`, workersDev: false,
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },

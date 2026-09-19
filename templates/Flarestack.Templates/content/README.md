@@ -15,15 +15,21 @@ bun install --frozen-lockfile
 aspire run
 ```
 
-Open http://localhost:8787 and choose **Open my workspace**, then create an account.
+Open http://localhost:8787 and choose **Open my workspace**, then create an account. Open the **inbox** endpoint in Aspire to verify your email,
+then sign in.
 Aspire prints its dashboard login link (http://127.0.0.1:18888). Its logs and traces
 include D1 SQL text in Development, without bound parameter values. Metrics are
 not configured. Use `aspire start`, `aspire wait app` and `aspire stop` for a
 background session. Razor/C# edits use hot reload in this default fast mode.
 
-Only run one app with these default ports at a time. To change the public origin,
-update `local.json`, the Web project's Development auth authority, and the browser
-test configuration together. The internal bridge port is configured in `local.json`.
+To run another app alongside this one, stop it and use
+`bun run configure:local --port 9000` to assign eight consecutive ports. Auth
+origins and browser tests follow that configuration. `bun run doctor` checks tools
+and local configuration. See [configuration and upgrades](docs/upgrading.md).
+
+Account recovery, profile/password settings, session management, and user
+administration are included. See [accounts and email](docs/accounts-and-email.md)
+for the explicit first-admin setup and .NET APIs. No default admin is created.
 
 ## Container mode
 

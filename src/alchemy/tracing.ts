@@ -4,6 +4,8 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BasicTracerProvider, SimpleSpanProcessor, type SpanExporter } from "@opentelemetry/sdk-trace-base";
 import { ProtobufTraceSerializer } from "@opentelemetry/otlp-transformer";
 
+export function telemetryPath(path: string) { return path.replace(/(\/auth\/reset-password\/)[^/]+/, "$1{token}"); }
+
 // A provider per invocation avoids retaining workerd I/O across request contexts.
 export async function tracedRequest(service: string, request: Request, run: (request: Request) => Promise<Response>, telemetry?: { OTEL_EXPORTER_OTLP_ENDPOINT?: string; OTEL_EXPORTER_OTLP_HEADERS?: string }): Promise<Response> {
   const exporter: SpanExporter = {
@@ -17,7 +19,7 @@ export async function tracedRequest(service: string, request: Request, run: (req
   const provider = new BasicTracerProvider({ resource: resourceFromAttributes({ "service.name": service }), spanProcessors: [new SimpleSpanProcessor(exporter)] });
   const propagator = new W3CTraceContextPropagator();
   const parent = propagator.extract(ROOT_CONTEXT, request.headers, { keys: h => [...h.keys()], get: (h, key) => h.get(key) ?? undefined });
-  const path = new URL(request.url).pathname;
+  const path = telemetryPath(new URL(request.url).pathname);
   const span = provider.getTracer("flarestack").startSpan(`${request.method} ${path}`, { kind: SpanKind.SERVER, attributes: { "http.request.method": request.method, "url.path": path } }, parent);
   const headers = new Headers(request.headers);
   propagator.inject(trace.setSpan(parent, span), headers, { set: (h, key, value) => h.set(key, value) });

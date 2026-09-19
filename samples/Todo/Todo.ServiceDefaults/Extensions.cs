@@ -16,7 +16,7 @@ public static class ServiceDefaults
         builder.Logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "flarestack.todo"))
-            .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Flarestack.D1", "Todo.Web").AddOtlpExporter());
+            .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Flarestack.D1", "Flarestack.Email", "Todo.Web").AddOtlpExporter());
         builder.Logging.AddOpenTelemetry(options => { options.IncludeFormattedMessage = true; options.IncludeScopes = true; options.AddOtlpExporter(); });
         return builder;
     }

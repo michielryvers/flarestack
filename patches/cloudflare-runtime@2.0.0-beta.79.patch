@@ -1,0 +1,19 @@
+diff --git a/src/core/workerd/Workerd.ts b/src/core/workerd/Workerd.ts
+index 19830f5ebab136c2c87931697f687165bd86b015..862b963782ec9cdd198ec0602e664a8b9ee73822 100644
+--- a/src/core/workerd/Workerd.ts
++++ b/src/core/workerd/Workerd.ts
+@@ -450,6 +450,14 @@ const classifyWorkerdError = (
+ ): ConfigError | SystemError => {
+   const text = (stderr ?? "").trim();
+   const detail = { stderr: text, exitCode, signal };
++  // Concurrent local Workers may briefly contend while opening shared SQLite
++  // storage. Classify this before benign compatibility warnings so the existing
++  // bounded SystemError startup retry can recover without recreating any data.
++  if (text.includes("SQLITE_BUSY_RECOVERY")) return new SystemError({
++    subtag: "WorkerdStartFailed",
++    message: "Local SQLite recovery is busy; retrying Worker startup.",
++    detail,
++  });
+   const lines = text
+     .split("\n")
+     .map((line) => line.trim())

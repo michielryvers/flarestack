@@ -123,7 +123,7 @@ local ports and state. Raw Alchemy bypasses telemetry collection.
 
 Local Aspire orchestration, fast mode and container fidelity mode are implemented.
 The hosting package uses Aspire executable resources, with endpoints, health checks, dependencies and standard resource
-commands. Production authentication hardening,
+commands. Further production authentication hardening,
 cloud secrets/state verification, and deployment integration remain future work.
 
 ## Framework and sample boundary
@@ -159,9 +159,9 @@ See [compatibility notes](docs/compatibility.md) and the
 ## Local packages
 
 `bun run prepare:local` builds the authentication browser asset, packs
-`Flarestack.D1`, `Flarestack.Authentication`, and `Aspire.Hosting.Flarestack` into
+`Flarestack.D1`, `Flarestack.Authentication`, `Flarestack.Email`, and `Aspire.Hosting.Flarestack` into
 `artifacts/nuget`, packs `@flarestack/alchemy` into `artifacts/npm`, installs the
-sample's tarball dependency, and restores the solution. All four packages use
+sample's tarball dependency, and restores the solution. All five packages use
 `0.1.0-local.1`. Nothing is published.
 
 The sample and AppHost use NuGet `PackageReference`s. Infrastructure imports
@@ -191,7 +191,7 @@ versions, a license decision and a release policy remain separate work.
 ## Blazor template
 
 `bun run prepare:local` also stages and packs `Flarestack.Templates` from the tested
-sample. It carries the three local NuGet packages and npm tarball, so generated
+sample. It carries the four local NuGet packages and npm tarball, so generated
 apps do not reference this repository or require unpublished packages from a registry.
 
 ```sh
@@ -222,3 +222,16 @@ assembles a clean staging tree in `artifacts/template/content`; template-specifi
 metadata and instructions live under `templates/Flarestack.Templates/content`.
 Generated apps retain their bundled `artifacts` packages in source control during
 this local preview. No template post-action publishes or deploys anything.
+
+## Accounts, email and local configuration
+
+The starter includes email verification, password recovery, account/profile settings,
+user administration and session revocation. Email stays in a local inbox linked
+from Aspire. New users verify their address through that inbox before signing in.
+See [accounts and email](docs/accounts-and-email.md) for the .NET APIs, explicit
+first-admin setup, auth extension hooks and the 30-second Blazor revocation window.
+
+`bun run doctor` checks prerequisites. With the AppHost stopped,
+`bun run configure:local --port 9000` assigns a block of eight ports and derives
+the auth origin automatically. See [configuration and upgrades](docs/upgrading.md).
+Live email sending and cloud deployment have not been exercised.

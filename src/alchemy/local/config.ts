@@ -7,6 +7,8 @@ export interface LocalAppOptions {
   project: string;
   publicOrigin: string;
   bridgePort: number;
+  inboxPort?: number;
+  relayPort?: number;
   buildRoot: string;
   buildContext: string;
   dockerfile: string;
@@ -24,6 +26,10 @@ export function loadLocalApp(path: string) {
     throw new Error("Local publicOrigin must be a loopback HTTP origin");
   if (!Number.isInteger(options.bridgePort) || options.bridgePort < 1 || options.bridgePort > 65535 || options.bridgePort === Number(origin.port || 80))
     throw new Error("bridgePort must be a distinct valid port");
+  options.inboxPort ??= 8810;
+  if (!Number.isInteger(options.inboxPort) || options.inboxPort < 1 || options.inboxPort > 65535 || [options.bridgePort, Number(origin.port || 80)].includes(options.inboxPort)) throw new Error("inboxPort must be a distinct valid port");
+  options.relayPort ??= 4319;
+  if (!Number.isInteger(options.relayPort) || options.relayPort < 1 || options.relayPort > 65535 || [options.bridgePort, options.inboxPort, Number(origin.port || 80)].includes(options.relayPort)) throw new Error("relayPort must be a distinct valid port");
   const base = dirname(resolve(path));
   const root = resolve(base, options.buildRoot);
   const context = resolve(root, options.buildContext);

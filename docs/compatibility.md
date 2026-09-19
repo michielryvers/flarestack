@@ -251,7 +251,8 @@ The `Flarestack.Templates` package generates a standalone app with bundled local
 framework packages, normalized project names, a distinct stack/client identity,
 and a fresh user-secrets ID. Template assembly reuses the tested Todo sample;
 only metadata, generated-app instructions and layout transformations are maintained
-separately. Default ports match the sample, so run one AppHost at a time.
+separately. Default ports match the sample; use `configure:local` with a separate port block
+when running multiple apps.
 
 Testing a newly generated app exposed previously masked bootstrap and upgrade issues:
 
@@ -282,3 +283,52 @@ and `.gitignore`). A named solution compiled with zero warnings/errors. Generate
 apps outside the repository passed fast-mode hot reload and browser E2E, and a
 second app started directly in container mode on an empty D1 database and passed
 browser E2E and Aspire log/trace checks, including SQL spans.
+
+## Account lifecycle, administration and email (2026-09-19)
+
+The runtime now includes an Alchemy email Worker and a private .NET email bridge,
+plus an Aspire-linked local inbox. MIME sending is intentional: the pinned local
+simulator's builder API prints message bodies, whereas its raw MIME path only
+prints the capture filename. Recovery token paths are redacted in Worker telemetry.
+
+Auth schema migration includes the Better Auth Admin plugin. OIDC session IDs are
+validated through a private Worker handler for every ASP.NET cookie request and
+at 30-second intervals for live Blazor circuits. Admin operations authenticate the
+actor again inside that handler and use Better Auth's own mutation APIs. Bootstrap
+admins are explicit user IDs in configuration; templates clear this list.
+
+Local port configuration now derives authentication authorities and browser-test
+origins, includes inbox and Docker relay ports, and namespaces auth cookies by
+client ID. Platform readiness checks auth before allowing the .NET app to start.
+
+Concurrent local Worker starts exposed `SQLITE_BUSY_RECOVERY` in the pinned
+`@alchemy.run/cloudflare-runtime`. A preceding harmless compatibility warning made
+its classifier treat the failure as a script configuration error, bypassing the
+runtime's existing startup retry. The bundled patch classifies only that SQLite
+recovery condition as a SystemError, enabling the existing bounded retry. It does
+not retry user requests or modify SQLite state.
+
+
+Container verification caught Alchemy's automatic loopback rewrite changing the
+public OIDC authority in an environment variable to `host.docker.localhost`.
+.NET correctly rejected that HTTP issuer. The local supervisor now writes the
+public authority into staged development settings, while private calls continue
+through service bindings. The original application settings are not modified.
+Container log collection also subscribes to Docker start events so early startup
+errors are captured without waiting for periodic discovery.
+
+Administration currently provides exact-email lookup and pagination. The pinned
+Better Auth/Workerd combination returned empty results for native substring
+search during browser verification; the wrapper uses the verified equality filter.
+
+Validation: 53 Bun tests, 13 .NET tests, TypeScript checking, and two template
+archive/name tests pass. Browser tests cover verified signup, recovery and token
+redaction, profile/password changes, self-service session controls, Todo CRUD,
+logout and isolation. The opt-in admin test passes bootstrap, promotion/demotion,
+disable/enable, session revocation and removal of an already-open authenticated
+Blazor workspace. Fresh named apps outside the repository passed Fast and
+Container mode on ports 9100–9107; Container mode was also exercised against a
+fresh D1 database. Aspire verification confirms logs and connected Worker/.NET,
+.NET/D1 (including SQL), .NET/auth and .NET/email spans in both modes. The port
+configuration command refuses to change a running AppHost. No cloud resources
+were deployed and no real email was sent.

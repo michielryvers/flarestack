@@ -1,0 +1,16 @@
+@page "/account/security"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+<PageTitle>Account security</PageTitle>
+<section class="auth-card">
+    <h1>Profile and security</h1>
+    <form id="profile-form" data-enhance="false"><label>Name<input name="name" maxlength="100" required /></label><button>Update name</button></form>
+    <form id="password-form" data-enhance="false">
+        <label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+        <label>New password<input name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required /></label>
+        <button>Change password</button>
+    </form>
+    <p id="security-status" role="status"></p>
+    <h2>Sessions</h2><div id="sessions"></div>
+    <button id="revoke-other-sessions">Sign out other sessions</button>
+</section>
+<script type="module" src="_content/Flarestack.Authentication/sign-in.js"></script>

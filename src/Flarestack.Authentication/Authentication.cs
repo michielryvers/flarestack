@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
@@ -42,12 +43,28 @@ public static class FlarestackAuthentication
             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
         }).AddCookie(options => {
-            options.Cookie.Name = "Flarestack.Session";
+            options.Cookie.Name = "Flarestack.Session." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(clientId)))[..16];
+            options.AccessDeniedPath = "/account/access-denied";
             options.Cookie.HttpOnly = true;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.Cookie.SecurePolicy = local ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
             options.ExpireTimeSpan = TimeSpan.FromHours(8);
             options.SlidingExpiration = true;
+            options.Events.OnValidatePrincipal = async context => {
+                var session = await context.HttpContext.RequestServices.GetRequiredService<AccountClient>().ValidateAsync(context.Principal!, context.HttpContext.RequestAborted);
+                if (session is null) { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); return; }
+                var identity = (ClaimsIdentity)context.Principal!.Identity!;
+                foreach (var (type, value) in new[] { ("name", session.Name), ("email", session.Email), (ClaimTypes.Email, session.Email) }) {
+                    if (identity.FindFirst(type)?.Value == value) continue;
+                    foreach (var claim in identity.FindAll(type).ToArray()) identity.RemoveClaim(claim);
+                    identity.AddClaim(new(type, value)); context.ShouldRenew = true;
+                }
+                if (!session.Roles.Order().SequenceEqual(identity.FindAll("role").Select(c => c.Value).Order())) {
+                    foreach (var claim in identity.FindAll("role").ToArray()) identity.RemoveClaim(claim);
+                    foreach (var role in session.Roles) identity.AddClaim(new("role", role));
+                    context.ShouldRenew = true;
+                }
+            };
         }).AddOpenIdConnect(options => {
             options.Authority = authority.ToString().TrimEnd('/');
             options.ClientId = clientId;
@@ -60,6 +77,7 @@ public static class FlarestackAuthentication
             options.Scope.Clear();
             foreach (var scope in new[] { "openid", "profile", "email" }) options.Scope.Add(scope);
             options.TokenValidationParameters.NameClaimType = "name";
+            options.TokenValidationParameters.RoleClaimType = "role";
             options.ClaimActions.MapUniqueJsonKey(ClaimTypes.NameIdentifier, "sub");
             options.ClaimActions.MapUniqueJsonKey(ClaimTypes.Email, "email");
             options.ClaimActions.MapUniqueJsonKey("email", "email");
@@ -68,6 +86,12 @@ public static class FlarestackAuthentication
                 var identity = (ClaimsIdentity)context.Principal!.Identity!;
                 if (identity.FindFirst("sub") is { } sub && !identity.HasClaim(c => c.Type == ClaimTypes.NameIdentifier)) identity.AddClaim(new(ClaimTypes.NameIdentifier, sub.Value));
                 return Task.CompletedTask;
+            };
+            options.Events.OnRemoteFailure = async context => {
+                context.HandleResponse();
+                context.Response.StatusCode = 503;
+                context.Response.ContentType = "text/html; charset=utf-8";
+                await context.Response.WriteAsync("<!doctype html><title>Sign-in unavailable</title><h1>Sign-in could not be completed</h1><p>Please retry in a moment.</p><a href='/account/login'>Try again</a>");
             };
             options.Events.OnRedirectToIdentityProviderForSignOut = context => {
                 context.ProtocolMessage.ClientId = clientId;
@@ -84,6 +108,15 @@ public static class FlarestackAuthentication
                 options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             }
         });
+        var bridge = new Uri(config["Flarestack:Authentication:BackchannelBaseAddress"] ?? "http://auth.internal");
+        var bridgeToken = config["Flarestack:LocalBridgeToken"];
+        if (!string.IsNullOrEmpty(bridgeToken) && !bridge.IsLoopback) throw new InvalidOperationException("Local bridge credentials require a loopback address.");
+        services.AddHttpClient<AccountClient>(client => {
+            client.BaseAddress = bridge; client.Timeout = TimeSpan.FromSeconds(10);
+            if (!string.IsNullOrEmpty(bridgeToken)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", bridgeToken);
+        });
+        services.AddScoped<IUserAdministration>(provider => provider.GetRequiredService<AccountClient>());
+        services.AddScoped<AuthenticationStateProvider, FlarestackAuthenticationStateProvider>();
         services.AddAuthorization();
         services.AddCascadingAuthenticationState();
         return services;
@@ -97,7 +130,7 @@ public static class FlarestackAuthentication
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = "/" });
         }).RequireAuthorization();
-        endpoints.MapGet("/account/access-denied", () => Results.StatusCode(403));
+        endpoints.MapGet("/account/access-denied", () => Results.Content("<!doctype html><title>Access denied</title><h1>Access denied</h1><p>Your account does not have permission to view this page.</p><a href='/account/settings'>Account settings</a>", "text/html", statusCode: 403));
         return endpoints;
     }
 }

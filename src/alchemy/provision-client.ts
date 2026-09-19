@@ -6,9 +6,9 @@ import { betterAuth } from "better-auth";
 import { getSchema } from "better-auth/db";
 import { getMigrations } from "better-auth/db/migration";
 import * as Effect from "effect/Effect";
-import { authOptions, type OAuthClientOptions } from "./auth-options.ts";
+import { authOptions, type AuthFeatures, type OAuthClientOptions } from "./auth-options.ts";
 
-export const provisionClient = (origin: string, client: OAuthClientOptions): Effect.Effect<void, never, Database> => Effect.gen(function* () {
+export const provisionClient = (origin: string, client: OAuthClientOptions, features: AuthFeatures = {}): Effect.Effect<void, never, Database> => Effect.gen(function* () {
   const db = yield* Database;
   const support = db.migrate!;
   const Ensure = Action("Flarestack.OAuthClient", Effect.gen(function* () {
@@ -16,7 +16,7 @@ export const provisionClient = (origin: string, client: OAuthClientOptions): Eff
     return (_input: { identity: Record<string, unknown>; origin: string; revision: number; schema: string; client: OAuthClientOptions }) => Effect.scoped(Effect.gen(function* () {
       const database = yield* acquire;
       yield* Effect.promise(async () => {
-        const options = { ...authOptions(origin, client, true), database, secret: "provisioning-only-not-used-to-issue-tokens", telemetry: { enabled: false } };
+        const options = { ...authOptions(origin, client, true, features), database, secret: "provisioning-only-not-used-to-issue-tokens", telemetry: { enabled: false } };
         await (await getMigrations(options)).runMigrations();
         const auth = betterAuth(options);
         const context = await auth.$context;
@@ -44,7 +44,7 @@ export const provisionClient = (origin: string, client: OAuthClientOptions): Eff
       return { clientId: client.clientId };
     }));
   }));
-  const result = yield* Ensure(client.resourceId, { identity: support.identity, origin, client, revision: 3, schema: JSON.stringify(getSchema(authOptions(origin, client))) });
+  const result = yield* Ensure(client.resourceId, { identity: support.identity, origin, client, revision: 4, schema: JSON.stringify(getSchema(authOptions(origin, client, false, features))) });
   const runtime = yield* CurrentRuntimeContext;
   if (runtime) yield* runtime.set(client.resourceId, result as never);
 }) as Effect.Effect<void, never, Database>;

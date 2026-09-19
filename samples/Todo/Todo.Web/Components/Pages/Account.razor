@@ -1,0 +1,32 @@
+@page "/account/settings"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Flarestack.Email
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@inject IEmailSender Email
+<PageTitle>Account settings</PageTitle>
+<section class="auth-card">
+    <h1>Account settings</h1>
+    <AuthorizeView Context="auth">
+        <p>@auth.User.FindFirstValue(ClaimTypes.Email)</p>
+        <p>Account ID: <code data-testid="account-id">@auth.User.FindFirstValue("sub")</code></p>
+        <p><a href="/account/security" data-enhance-nav="false">Profile, password and sessions</a></p>
+        @if (auth.User.IsInRole("admin")) { <p><a href="/admin/users" data-enhance-nav="false">Manage users</a></p> }
+        <button disabled="@(busy || !interactive)" @onclick="() => SendTest(auth.User)">Send me a test email</button>
+    </AuthorizeView>
+    <p role="status">@status</p>
+</section>
+@code {
+    private bool busy, interactive;
+    protected override void OnAfterRender(bool firstRender) { if (firstRender) { interactive = true; StateHasChanged(); } }
+    private string status = "";
+    private async Task SendTest(ClaimsPrincipal user) {
+        busy = true;
+        try {
+            await Email.SendAsync(new EmailMessage(user.FindFirstValue(ClaimTypes.Email)!, "Hello from Flarestack", "Your application's email transport is working."));
+            status = "Email accepted. In local development, open the inbox in Aspire.";
+        } catch { status = "Email could not be sent. Please try again."; }
+        finally { busy = false; }
+    }
+}

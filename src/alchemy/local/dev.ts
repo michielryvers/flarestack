@@ -1,8 +1,9 @@
-import { readdir, stat, open, cp, mkdir, rm } from "node:fs/promises";
-import { resolve, relative } from "node:path";
+import { readdir, stat, open, cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
+import { resolve, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LocalLogs, readLines } from "./logs.ts";
 
+import { startInbox } from "./inbox.ts";
 import { loadLocalApp } from "./config.ts";
 
 if (!process.argv[2]) throw new Error("Usage: dev.ts <local-app.json>");
@@ -21,7 +22,7 @@ const readers: Promise<unknown>[] = [];
 let stopping = false;
 let wakeStop: () => void;
 const stopped = new Promise<void>(resolve => { wakeStop = resolve; });
-function stop() { stopping = true; wakeStop(); }
+function stop() { stopping = true; inbox?.stop(); relay?.stop(); wakeStop(); }
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 
@@ -35,7 +36,7 @@ function spawn(command: string[], service: string, cwd = infra, echo = true) {
     readers.push(readLines(stream, line => {
       if (echo) (name === "stdout" ? console.log : console.error)(line);
       // Worker files are the authoritative source; avoid replaying their CLI mirror.
-      if (service !== "flarestack.alchemy" || !/^\[(Edge|Auth|LocalBridge)\]/.test(line)) logs.emit(service, line, name);
+      if (service !== "flarestack.alchemy" || !/^\[(Edge|Auth|LocalBridge|Email)\]/.test(line)) logs.emit(service, line, name);
     }).catch(error => { if (!stopping) console.error(`Log reader failed: ${error.message}`); }));
   }
   return child;
@@ -50,7 +51,7 @@ async function workerFiles(directory = logRoot): Promise<string[]> {
   const nested = await Promise.all(entries.map(async entry => {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) return workerFiles(path);
-    return entry.isFile() && /\/(Edge|Auth|LocalBridge)\/[^/]+\.log$/.test(path) ? [path] : [];
+    return entry.isFile() && /\/(Edge|Auth|LocalBridge|Email)\/[^/]+\.log$/.test(path) ? [path] : [];
   }));
   return nested.flat();
 }
@@ -68,7 +69,7 @@ async function scanFiles(initial = false) {
         state.pending += state.decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
         const lines = state.pending.split("\n");
         state.pending = lines.pop() ?? "";
-        const service = path.includes("/Auth/") ? "flarestack.auth" : "flarestack.worker";
+        const service = path.includes("/Email/") ? "flarestack.email" : path.includes("/Auth/") ? "flarestack.auth" : "flarestack.worker";
         for (const line of lines) logs.emit(service, line, "stdout", { "log.file.path": relative(infra, path) });
         if (state.pending.length > 65536) { logs.emit(service, state.pending.slice(0, 65536)); state.pending = ""; }
       } finally { await handle.close(); }
@@ -77,20 +78,28 @@ async function scanFiles(initial = false) {
   }
 }
 const attached = new Set<string>();
+function attachContainer(line: string) {
+  const [id, name] = line.split(" ");
+  if (!id || !name?.startsWith(`workerd-${app.stackName}-`) || attached.has(id) || stopping) return;
+  attached.add(id);
+  spawn(["docker", "logs", "--follow", "--since", started, id], name.endsWith("-proxy") ? "flarestack.container-proxy" : "flarestack.dotnet", infra, false);
+}
+function watchContainers() {
+  // Start events capture failures too brief for periodic discovery.
+  const events = Bun.spawn(["docker", "events", "--filter", "event=start", "--format", "{{.Actor.ID}} {{.Actor.Attributes.name}}"], {stdout:"pipe",stderr:"pipe"});
+  children.add(events);
+  readers.push(readLines(events.stdout, attachContainer));
+  readers.push(readLines(events.stderr, line => logs.emit("flarestack.local", line, "stderr")));
+}
 async function scanContainers() {
-  const process = Bun.spawn(["docker", "ps", "--filter", `name=^workerd-${app.stackName}-`, "--format", "{{.ID}} {{.Names}}"], { stdout: "pipe", stderr: "pipe" });
+  const process = Bun.spawn(["docker", "ps", "--no-trunc", "--filter", `name=^workerd-${app.stackName}-`, "--format", "{{.ID}} {{.Names}}"], { stdout: "pipe", stderr: "pipe" });
   const [output, error, exit] = await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text(), process.exited]);
   if (exit) throw new Error(`Docker log discovery failed: ${error.trim()}`);
-  for (const line of output.trim().split("\n")) {
-    const [id, name] = line.split(" ");
-    if (!id || !name || attached.has(id)) continue;
-    attached.add(id);
-    spawn(["docker", "logs", "--follow", "--since", started, id], name.endsWith("-proxy") ? "flarestack.container-proxy" : "flarestack.dotnet", infra, false);
-  }
+  for (const line of output.trim().split("\n")) attachContainer(line);
 }
 
 // Private Docker-host relay: Aspire itself remains loopback-only.
-const relay = fast ? undefined : Bun.serve({ hostname: "172.17.0.1", port: 4319, maxRequestBodySize: 4 * 1024 * 1024,
+const relay = fast ? undefined : Bun.serve({ hostname: "172.17.0.1", port: app.relayPort!, maxRequestBodySize: 4 * 1024 * 1024,
   async fetch(request) {
     const path = new URL(request.url).pathname;
     if (request.method !== "POST" || !["/v1/logs", "/v1/traces", "/v1/metrics"].includes(path)) return new Response(null, { status: 404 });
@@ -99,6 +108,7 @@ const relay = fast ? undefined : Bun.serve({ hostname: "172.17.0.1", port: 4319,
 });
 let exitCode = 0;
 let dashboard: Bun.Subprocess | undefined;
+let inbox: ReturnType<typeof startInbox> | undefined;
 try {
   await scanFiles(true);
   if (!external) {
@@ -114,6 +124,7 @@ try {
     }
     if (!ready) throw new Error("Aspire dashboard did not become ready");
   }
+  inbox = startInbox(infra, app.inboxPort!, logs);
   logs.emit("flarestack.local", JSON.stringify({ message: "Local OTLP log collection started", endpoint }));
   console.log(`Local logs → ${endpoint}; Aspire dashboard → ${dashboardUrl}`);
   const root = app.root;
@@ -127,6 +138,16 @@ try {
   for (const source of app.buildSources) {
     await cp(resolve(root, source), resolve(buildContext, source), { recursive: true, filter: path => !path.split("/").some(part => ["bin", "obj", ".alchemy", "node_modules"].includes(part)) });
   }
+  // The public OIDC issuer is an identity, not an outbound connection URL.
+  // Alchemy rewrites loopback URLs in Docker env, so stage it as app configuration.
+  const settingsPath = resolve(buildContext, relative(root, dirname(app.projectPath)), "appsettings.Development.json");
+  const settings = JSON.parse(await readFile(settingsPath, "utf8").catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") return "{}"; throw error;
+  }));
+  settings.Flarestack ??= {}; settings.Flarestack.Authentication ??= {};
+  settings.Flarestack.Authentication.Authority = `${app.publicOrigin}/auth`;
+  await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  if (!fast) watchContainers();
   const alchemyCli = fileURLToPath(new URL("../bin/cli.js", import.meta.resolve("alchemy")));
   const alchemy = spawn(["bun", "run", alchemyCli, "dev", "--no-input"], "flarestack.alchemy");
   void alchemy.exited.then(code => { if (!stopping) { exitCode = code; stop(); } });
@@ -149,6 +170,7 @@ try {
   await scanFiles().catch(() => {});
   await logs.shutdown();
   relay?.stop();
+  inbox?.stop();
   dashboard?.kill("SIGINT");
   await Promise.race([Promise.all(readers), Bun.sleep(2000)]);
 }

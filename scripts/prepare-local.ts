@@ -50,7 +50,7 @@ try {
   await mkdir("artifacts/nuget", { recursive: true });
   await mkdir("artifacts/npm", { recursive: true });
   await run(["bun", "run", "build:auth-ui"]);
-  for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Aspire.Hosting.Flarestack"]) {
+  for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
     await run(["dotnet", "pack", `src/${name}/${name}.csproj`, "-c", "Release", "-o", "artifacts/nuget", "--nologo"]);
     // Only clear our local-preview packages in this repository's private cache.
     await rm(resolve(root, ".packages/nuget", name.toLowerCase(), "0.1.0-local.1"), { recursive: true, force: true });

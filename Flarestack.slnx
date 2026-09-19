@@ -7,6 +7,7 @@
   <Folder Name="/src/">
     <Project Path="src/Aspire.Hosting.Flarestack/Aspire.Hosting.Flarestack.csproj" />
     <Project Path="src/Flarestack.Authentication/Flarestack.Authentication.csproj" />
+    <Project Path="src/Flarestack.Email/Flarestack.Email.csproj" />
     <Project Path="src/Flarestack.D1/Flarestack.D1.csproj" />
   </Folder>
   <Folder Name="/tests/">

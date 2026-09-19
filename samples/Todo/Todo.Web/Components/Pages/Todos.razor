@@ -1,9 +1,12 @@
+@using Microsoft.AspNetCore.Components.Authorization
 @page "/todos"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @rendermode InteractiveServer
 @inject TodoRepository Repository
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationState
 <PageTitle>My tasks · Flarestack</PageTitle>
+<AuthorizeView>
+<Authorized>
 <section class="workspace">
     <div class="workspace-heading">
         <div><span class="eyebrow">YOUR WORKSPACE</span><h1>One thing at a time.</h1><p>@DateTime.Now.ToString("dddd, d MMMM") · @_items.Count(x => !x.IsComplete) tasks to go</p></div>
@@ -21,6 +24,9 @@
         <div class="panel-footer"><span>Only you can see these tasks.</span><span>@_items.Count(x => x.IsComplete) completed</span></div>
     </div>
 </section>
+</Authorized>
+<NotAuthorized><section class="auth-card"><h1>Session or permissions changed</h1><a href="/account/login" data-enhance-nav="false">Sign in again</a></section></NotAuthorized>
+</AuthorizeView>
 @code {
     private System.Security.Claims.ClaimsPrincipal? _user;
     private IReadOnlyList<TodoItem> _items = [];
@@ -35,7 +41,8 @@
         finally { _loading = false; }
     }
     private async Task Change(Func<Task> action) {
-        if (_busy || _user is null) return;
+        _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        if (_busy || _user.Identity?.IsAuthenticated != true) return;
         _busy = true; _error = null;
         using var activity = TodoTelemetry.Source.StartActivity("Todo change");
         try { await action(); _items = await Repository.ListAsync(_user); }
