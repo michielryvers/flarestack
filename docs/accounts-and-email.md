@@ -28,9 +28,9 @@ authorization independently for a circuit's lifetime.
 
 1. Sign up, verify the email and sign in.
 2. Copy the account ID shown at `/account/settings`.
-3. Add that exact ID to `features.adminUserIds` in `infra/auth.ts` (the repository
-   sample is `samples/Todo/infra/auth.ts`).
-4. Stop and start the AppHost and reload the page.
+3. Set `FLARESTACK_ADMIN_USER_IDS` to that ID (comma-separated for multiple IDs),
+   or set the AppHost user-secret `Flarestack:AdminUserIds`.
+4. Restart the AppHost with that configuration and reload the page.
 
 There is no default administrator or shared password. Bootstrap administrators are
 managed in configuration. The admin UI protects them and the acting administrator
@@ -48,7 +48,7 @@ separately retained, tamper-resistant audit store.
 
 ## Email from application code
 
-Register `AddFlarestackEmail(configuration)` and inject `IEmailSender`:
+Register `AddFlarestackEmail(configuration)` and inject `IFlarestackEmailSender`:
 
 ```csharp
 await email.SendAsync(new EmailMessage(
@@ -69,7 +69,7 @@ or live email sent as part of this implementation.
 
 ## Auth extension points
 
-`createAuthWorker` accepts `features.requireEmailVerification`, `adminUserIds`,
+`createAuthWorker` accepts `features.requireEmailVerification`,
 additional Better Auth `plugins`, and `databaseHooks`. Core admin/JWT/OAuth plugins
 cannot be replaced through the additional-plugin list. Plugin schema changes feed
 the existing migration action; hooks do not run for the provisioning service user.
@@ -81,5 +81,7 @@ those automatically.
 
 Run browser tests, then `bun run verify:telemetry`. The administration test is
 opt-in (`FLARESTACK_TEST_ADMIN=1 bunx playwright test admin.spec.ts`) because it
-briefly configures a test bootstrap administrator and restarts the AppHost. It
-restores the original auth file in `finally`; do not edit that file concurrently.
+briefly configures a test bootstrap administrator through the process environment
+and restarts the AppHost. Its `finally` restores the original environment.
+
+For exact timeout, failure and in-flight semantics, see [the security model](security-model.md).

@@ -7,10 +7,10 @@ namespace Flarestack.Hosting;
 
 public enum FlarestackLocalMode { Fast, Container }
 
-public sealed record FlarestackOptions(string ConfigurationFile, string RuntimeDirectory)
+public sealed class FlarestackOptions
 {
-    public FlarestackLocalMode Mode { get; init; } = FlarestackLocalMode.Fast;
-    public string ApplicationName { get; init; } = "app";
+    public FlarestackLocalMode Mode { get; set; } = FlarestackLocalMode.Fast;
+    public string ApplicationName { get; set; } = "app";
 }
 
 public sealed record FlarestackResources(
@@ -21,13 +21,31 @@ public static class FlarestackHosting
 {
     /// <summary>Add the Alchemy supervisor and, in fast mode, the traced .NET watcher.</summary>
     public static FlarestackResources AddFlarestack(this IDistributedApplicationBuilder builder,
-        string name, FlarestackOptions options)
+        string name, string infrastructureDirectory, Action<FlarestackOptions>? configure = null)
     {
+        var options = new FlarestackOptions(); configure?.Invoke(options);
         if (!Enum.IsDefined(options.Mode)) throw new ArgumentException("Mode must be Fast or Container.", nameof(options));
-        var configPath = Path.GetFullPath(options.ConfigurationFile, builder.AppHostDirectory);
-        var runtime = Path.GetFullPath(options.RuntimeDirectory, builder.AppHostDirectory);
+        var infra = Path.GetFullPath(infrastructureDirectory, builder.AppHostDirectory);
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(infra, "package.json")));
+        var contract = manifest.RootElement.GetProperty("flarestack");
+        if (contract.GetProperty("protocol").GetInt32() != 2 || contract.GetProperty("release").GetString() != "0.1.0-local.2")
+            throw new InvalidOperationException("Aspire.Hosting.Flarestack 0.1.0-local.2 expects infrastructure protocol 2 and the same package release. Upgrade the full package set.");
+        foreach (var script in new[] { "flarestack:dev", "flarestack:watch" })
+            if (!manifest.RootElement.GetProperty("scripts").TryGetProperty(script, out _)) throw new InvalidOperationException($"Infrastructure package must declare {script}.");
+        string[] Script(string name) {
+            var text = manifest.RootElement.GetProperty("scripts").GetProperty(name).GetString()!;
+            // Launch the declared command directly so Aspire owns its signals/PID.
+            // Compound shell scripts would obscure lifecycle ownership.
+            if (text.IndexOfAny([';', '|', '&', '$', '`', '\n', '\r']) >= 0)
+                throw new InvalidOperationException($"{name} must be one executable command, without shell operators.");
+            return System.Text.RegularExpressions.Regex.Matches(text, "\"([^\"]*)\"|'([^']*)'|([^\\s]+)")
+                .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value).ToArray();
+        }
+        var dev = Script("flarestack:dev"); var watch = Script("flarestack:watch");
+        if (dev.Length == 0 || watch.Length == 0) throw new InvalidOperationException("Flarestack scripts cannot be empty.");
+        var configPath = Path.GetFullPath(contract.GetProperty("configuration").GetString()!, infra);
         var directory = Path.GetDirectoryName(configPath)!;
-        using var config = JsonDocument.Parse(File.ReadAllText(configPath));
+        using var config = JsonDocument.Parse(FlarestackLocal.ReadConfiguration(configPath).ToJsonString());
         string Required(string key) => config.RootElement.GetProperty(key).GetString() is { Length: > 0 } value
             ? value : throw new InvalidOperationException($"Missing Flarestack local setting: {key}");
         var origin = new Uri(Required("publicOrigin"));
@@ -39,11 +57,12 @@ public static class FlarestackHosting
         if (inboxPort is < 1 or > 65535 || inboxPort == bridgePort || inboxPort == origin.Port) throw new InvalidOperationException("Invalid inboxPort.");
         var root = Path.GetFullPath(Required("buildRoot"), directory);
         var project = Path.GetFullPath(Required("project"), directory);
-        foreach (var path in new[] { project, Path.Combine(runtime, "dev.ts"), Path.Combine(runtime, "watch-dotnet.ts"), Path.Combine(directory, Required("infrastructureDirectory"), "alchemy.run.ts") })
+        foreach (var path in new[] { project, Path.Combine(infra, "alchemy.run.ts") })
             if (!File.Exists(path)) throw new FileNotFoundException("Flarestack input not found.", path);
         var token = builder.AddParameter($"{name}-bridge-token", () => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)), secret: true);
-        var platform = builder.AddExecutable(name, "bun", root, Path.Combine(runtime, "dev.ts"), configPath)
+        var platform = builder.AddExecutable(name, dev[0], infra, dev[1..])
             .WithEnvironment("FLARESTACK_EXTERNAL_OTLP", "1")
+            .WithEnvironment("FLARESTACK_ADMIN_USER_IDS", builder.Configuration["Flarestack:AdminUserIds"] ?? Environment.GetEnvironmentVariable("FLARESTACK_ADMIN_USER_IDS") ?? "")
             .WithEnvironment("FLARESTACK_LOCAL_MODE", options.Mode.ToString())
             .WithEnvironment("FLARESTACK_LOCAL_BRIDGE_TOKEN", token)
             .WithHttpEndpoint(port: origin.Port, targetPort: origin.Port, name: "http", isProxied: false)
@@ -54,7 +73,7 @@ public static class FlarestackHosting
         if (options.Mode == FlarestackLocalMode.Fast)
         {
             platform.WithHttpEndpoint(port: bridgePort, targetPort: bridgePort, name: "bridge", isProxied: false);
-            app = builder.AddExecutable(options.ApplicationName, "bun", root, Path.Combine(runtime, "watch-dotnet.ts"), project)
+            app = builder.AddExecutable(options.ApplicationName, watch[0], infra, watch[1..])
                 .WithHttpEndpoint(name: "http", isProxied: false)
                 .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
                 .WithEnvironment("Flarestack__Authentication__Authority", origin.GetLeftPart(UriPartial.Authority) + "/auth")

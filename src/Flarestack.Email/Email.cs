@@ -7,10 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace Flarestack.Email;
 
 public sealed record EmailMessage(string To, string Subject, string Text);
-public interface IEmailSender
+public interface IFlarestackEmailSender
 {
-    Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
+    Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }
+public enum EmailDeliveryState { Accepted }
+public sealed record EmailSendResult(EmailDeliveryState State, string? ProviderMessageId = null);
 public sealed class EmailDeliveryException() : Exception("Email delivery failed. See the correlated email trace.");
 public static class EmailRegistration
 {
@@ -20,17 +22,17 @@ public static class EmailRegistration
         var token = configuration["Flarestack:LocalBridgeToken"];
         if (address.Scheme is not ("http" or "https") || (!string.IsNullOrEmpty(token) && !address.IsLoopback))
             throw new InvalidOperationException("Invalid email bridge configuration.");
-        services.AddHttpClient<IEmailSender, EmailSender>(client => {
-            client.BaseAddress = address; client.Timeout = TimeSpan.FromSeconds(30);
+        services.AddHttpClient<IFlarestackEmailSender, EmailSender>(client => {
+            Flarestack.Internal.Protocol.Configure(client); client.BaseAddress = address; client.Timeout = TimeSpan.FromSeconds(30);
             if (!string.IsNullOrEmpty(token)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", token);
         });
         return services;
     }
 }
-public sealed class EmailSender(HttpClient client, ILogger<EmailSender> logger) : IEmailSender
+public sealed class EmailSender(HttpClient client, ILogger<EmailSender> logger) : IFlarestackEmailSender
 {
     public static readonly ActivitySource ActivitySource = new("Flarestack.Email");
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    public async Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
         if (!System.Net.Mail.MailAddress.TryCreate(message.To, out var address) || address.Address != message.To ||
@@ -40,8 +42,10 @@ public sealed class EmailSender(HttpClient client, ILogger<EmailSender> logger) 
         using var span = ActivitySource.StartActivity("email.send", ActivityKind.Client);
         try {
             using var response = await client.PostAsJsonAsync("/v1/email", message, cancellationToken);
+            Flarestack.Internal.Protocol.Ensure(response, "Flarestack.Email");
             if (!response.IsSuccessStatusCode) throw new EmailDeliveryException();
             logger.LogInformation("Email accepted");
+            return new(EmailDeliveryState.Accepted);
         } catch {
             span?.SetStatus(ActivityStatusCode.Error);
             logger.LogWarning("Email send failed");

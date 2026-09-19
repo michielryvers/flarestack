@@ -17,7 +17,7 @@ public sealed class AuthorityBackchannelHandler(Uri authority, Uri backchannel, 
     public static Uri Rewrite(Uri request, Uri authority, Uri backchannel) =>
         request.Scheme == authority.Scheme && request.Host == authority.Host && request.Port == authority.Port
         ? new Uri(backchannel.GetLeftPart(UriPartial.Authority) + request.PathAndQuery) : request;
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         if (request.RequestUri is not null) {
             var rewritten = Rewrite(request.RequestUri, authority, backchannel);
@@ -25,19 +25,27 @@ public sealed class AuthorityBackchannelHandler(Uri authority, Uri backchannel, 
                 if (!backchannel.IsLoopback) throw new InvalidOperationException("Local bridge credentials require a loopback backchannel.");
                 request.Headers.Add("x-flarestack-bridge", bridgeToken);
             }
+            if (rewritten != request.RequestUri) { request.Headers.Add("x-flarestack-protocol", Flarestack.Internal.Protocol.Version); request.Headers.Add("x-flarestack-release", Flarestack.Internal.Protocol.Release); }
             request.RequestUri = rewritten;
         }
-        return base.SendAsync(request, cancellationToken);
+        var response = await base.SendAsync(request, cancellationToken);
+        if (request.Headers.Contains("x-flarestack-protocol")) Flarestack.Internal.Protocol.Ensure(response, "Flarestack.Authentication");
+        return response;
     }
 }
+public sealed class AccountEndpointOptions { public string DefaultReturnPath { get; set; } = "/"; }
+
 public static class FlarestackAuthentication
 {
     public static bool IsLocalReturnUrl(string? url) => !string.IsNullOrEmpty(url) && url[0] == '/' && (url.Length == 1 || url[1] is not ('/' or '\\')) && !url.Any(char.IsControl) && !url.Contains('\\');
-    public static IServiceCollection AddFlarestackAuthentication(this IServiceCollection services, IConfiguration config, IHostEnvironment environment)
+    public static IServiceCollection AddFlarestackAuthentication(this IServiceCollection services, IConfiguration config)
     {
+        services.AddOptions<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme).PostConfigure<IHostEnvironment>((options, environment) => {
+            if (!environment.IsDevelopment() && !options.RequireHttpsMetadata) throw new InvalidOperationException("HTTP authority is permitted only in Development.");
+        });
         var authority = new Uri(config["Flarestack:Authentication:Authority"] ?? throw new InvalidOperationException("Authentication Authority is required."));
         var clientId = config["Flarestack:Authentication:ClientId"] ?? throw new InvalidOperationException("Authentication ClientId is required.");
-        var local = environment.IsDevelopment() && authority.IsLoopback;
+        var local = authority.IsLoopback;
         if (authority.Scheme != "https" && !(local && authority.Scheme == "http")) throw new InvalidOperationException("HTTP authority is permitted only for loopback Development.");
         services.AddAuthentication(options => {
             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -112,17 +120,22 @@ public static class FlarestackAuthentication
         var bridgeToken = config["Flarestack:LocalBridgeToken"];
         if (!string.IsNullOrEmpty(bridgeToken) && !bridge.IsLoopback) throw new InvalidOperationException("Local bridge credentials require a loopback address.");
         services.AddHttpClient<AccountClient>(client => {
+            Flarestack.Internal.Protocol.Configure(client);
             client.BaseAddress = bridge; client.Timeout = TimeSpan.FromSeconds(10);
             if (!string.IsNullOrEmpty(bridgeToken)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", bridgeToken);
         });
-        services.AddScoped<IUserAdministration>(provider => provider.GetRequiredService<AccountClient>());
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<AuthenticationStateProvider, FlarestackAuthenticationStateProvider>();
-        services.AddAuthorization();
+        services.AddAuthorization(options => options.AddPolicy(FlarestackPolicies.Administration, policy => policy.RequireAuthenticatedUser().RequireRole("admin")));
         services.AddCascadingAuthenticationState();
         return services;
     }
-    public static IEndpointRouteBuilder MapFlarestackAccountEndpoints(this IEndpointRouteBuilder endpoints, string defaultReturnUrl = "/")
+    public static IEndpointRouteBuilder MapFlarestackAccountEndpoints(this IEndpointRouteBuilder endpoints, Action<AccountEndpointOptions>? configure = null)
     {
+        var options = new AccountEndpointOptions(); configure?.Invoke(options);
+        var defaultReturnUrl = options.DefaultReturnPath;
         if (!IsLocalReturnUrl(defaultReturnUrl)) throw new ArgumentException("Default return URL must be local.", nameof(defaultReturnUrl));
         endpoints.MapGet("/account/login", (string? returnUrl) => Results.Challenge(new AuthenticationProperties { RedirectUri = IsLocalReturnUrl(returnUrl) ? returnUrl : defaultReturnUrl }, [OpenIdConnectDefaults.AuthenticationScheme]));
         endpoints.MapPost("/account/logout", async (HttpContext context, Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery) => {

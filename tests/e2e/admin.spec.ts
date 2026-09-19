@@ -1,18 +1,16 @@
 import {test,expect} from "@playwright/test";
-import {readFile,writeFile} from "node:fs/promises";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
 import {signUp,password} from "./accounts.ts";
 const exec = promisify(execFile);
 test("admin bootstrap, role changes, disabling and active circuit revocation",async ({browser})=>{
- test.skip(process.env.FLARESTACK_TEST_ADMIN !== "1","Opt in: temporarily configures and restores a bootstrap admin");
+ test.skip(process.env.FLARESTACK_TEST_ADMIN !== "1","Opt in: temporarily configures a bootstrap admin through the environment");
  test.setTimeout(240_000);
- const path = "samples/Todo/infra/auth.ts"; const original = await readFile(path,"utf8");
  const admin = await browser.newContext(); const page = await admin.newPage();
  const user = await browser.newContext(); const target = await user.newPage();
  const suffix=crypto.randomUUID(); const email=`managed-${suffix}@example.test`;
- const restart = async()=>{
-   await exec("aspire",["start","--non-interactive","--format","Json"], {maxBuffer:4*1024*1024});
+ const restart = async(adminIds?:string)=>{
+   await exec("aspire",["start","--non-interactive","--format","Json"], {maxBuffer:4*1024*1024,env:{...process.env,FLARESTACK_ADMIN_USER_IDS:adminIds ?? process.env.FLARESTACK_ADMIN_USER_IDS ?? ""}});
    await exec("aspire",["wait",process.env.FLARESTACK_TEST_MODE === "Container" ? "cloudflare" : "todo","--non-interactive"]);
  };
  try {
@@ -22,7 +20,7 @@ test("admin bootstrap, role changes, disabling and active circuit revocation",as
   expect((await target.request.post("/_flarestack/internal/users",{data:{}})).status()).toBe(404);
   expect((await target.request.get("/admin/users")).status()).toBe(403);
   await exec("aspire",["stop","--non-interactive"]);
-  await writeFile(path,original.replace("adminUserIds: []",`adminUserIds: [${JSON.stringify(id)}]`));await restart();
+  await restart(id!);
   await page.goto("/admin/users"); await expect(page.getByRole("heading",{name:"User administration"})).toBeVisible();
   await page.getByLabel("Find exact email").fill(email);await page.getByRole("button",{name:"Search",exact:true}).click();
   const row=page.getByRole("row").filter({hasText:email});await expect(row).toBeVisible();
@@ -37,7 +35,7 @@ test("admin bootstrap, role changes, disabling and active circuit revocation",as
   await row.getByRole("button",{name:"Enable",exact:true}).click();await expect(row.getByRole("cell",{name:"Active",exact:true})).toBeVisible();
   await target.getByLabel("Email",{exact:true}).fill(email);await target.getByLabel("Password",{exact:true}).fill(password);await target.getByRole("button",{name:"Continue"}).click();
   await expect.poll(()=>new URL(target.url()).pathname).toBe("/todos");
-  await row.getByRole("button",{name:"Revoke sessions",exact:true}).click();await expect(page.getByRole("status")).toContainText("User updated");
+  await row.getByRole("button",{name:"Revoke sessions",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Sessions revoked.");
   await target.goto("/todos");await expect(target.locator("#sign-in-form")).toBeVisible();
- } finally {await exec("aspire",["stop","--non-interactive"]);await writeFile(path,original);await restart();await admin.close();await user.close();}
+ } finally {await exec("aspire",["stop","--non-interactive"]);await restart();await admin.close();await user.close();}
 });

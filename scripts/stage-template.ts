@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
+const {version,protocol} = await Bun.file(resolve(root,"version.json")).json();
 const output = resolve(root, "artifacts/template/content");
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
@@ -20,7 +21,7 @@ async function emit(path: string, text: string) {
 }
 async function copyTree(from: string, to: string) {
   for (const entry of await readdir(resolve(root, from), { withFileTypes: true })) {
-    if (["bin", "obj", "node_modules", ".alchemy", ".packages", ".env"].includes(entry.name) || entry.name.startsWith(".env.")) continue;
+    if (["bin", "obj", "node_modules", ".alchemy", ".packages", ".env", "local.machine.json"].includes(entry.name) || entry.name.startsWith(".env.")) continue;
     const source = `${from}/${entry.name}`, target = `${to}/${transform(entry.name)}`;
     if (entry.isDirectory()) await copyTree(source, target);
     else if (entry.isFile()) {
@@ -45,7 +46,7 @@ Object.assign(local, { stackName: "app-TemplateSlug", project: "FlarestackTempla
   buildSources: ["Directory.Build.props", "Directory.Packages.props", "global.json", "NuGet.Config", "artifacts/nuget", "FlarestackTemplate.Web", "FlarestackTemplate.ServiceDefaults", "Dockerfile"] });
 await emit("local.json", JSON.stringify(local, null, 2) + "\n");
 const host = transform(await readFile(resolve(root, "Flarestack.AppHost/AppHost.cs"), "utf8"))
-  .replaceAll("../samples/Todo/local.json", "../local.json")
+  .replaceAll("../samples/Todo/infra", "../infra")
   .replaceAll("../samples/Todo/infra/node_modules", "../node_modules")
   .replace('ApplicationName = "todo"', 'ApplicationName = "app"');
 await emit("FlarestackTemplate.AppHost/AppHost.cs", host);
@@ -60,6 +61,13 @@ for (const file of ["todo.spec.ts", "accounts.ts", "local.ts", "accounts.spec.ts
 const infra = JSON.parse(await readFile(resolve(root, "samples/Todo/infra/package.json"), "utf8"));
 const repo = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
 infra.name = "app-TemplateSlug";
+const infraManifest = { private: true, type: "module", flarestack: { configuration: "../local.json", release: version, protocol }, scripts: {
+  "flarestack:dev": "bun ../node_modules/@flarestack/alchemy/local/dev.ts ../local.json",
+  "flarestack:watch": "bun ../node_modules/@flarestack/alchemy/local/watch-dotnet.ts ../FlarestackTemplate.Web/FlarestackTemplate.Web.csproj"
+}};
+await emit("infra/package.json", JSON.stringify(infraManifest, null, 2) + "\n");
+delete infra.flarestack;
+
 const npmArchive = basename(infra.dependencies["@flarestack/alchemy"]);
 infra.dependencies["@flarestack/alchemy"] = `file:artifacts/npm/${npmArchive}`;
 infra.devDependencies = { "@playwright/test": repo.devDependencies["@playwright/test"] };
@@ -68,14 +76,15 @@ infra.patchedDependencies = repo.patchedDependencies;
 for (const patch of Object.values(repo.patchedDependencies) as string[]) {
   await emit(patch, await readFile(resolve(root, patch), "utf8"));
 }
-infra.scripts = { "configure:local": "bun node_modules/@flarestack/alchemy/local/configure.ts local.json", doctor: "bun node_modules/@flarestack/alchemy/local/doctor.ts local.json", dev: "aspire run", "dev:container": "Flarestack__LocalMode=Container aspire run", "test:e2e": "playwright test", "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test", "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload", "verify:telemetry": "bun tests/e2e/verify-telemetry.ts" };
+await emit("scripts/smoke-cloud.ts", await readFile(resolve(root,"scripts/smoke-cloud.ts"),"utf8"));
+infra.scripts = { "smoke:cloud": "bun scripts/smoke-cloud.ts", "configure:local": "bun node_modules/@flarestack/alchemy/local/configure.ts local.json", doctor: "bun node_modules/@flarestack/alchemy/local/doctor.ts local.json", dev: "aspire run", "dev:container": "Flarestack__LocalMode=Container aspire run", "test:e2e": "playwright test", "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test", "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload", "verify:telemetry": "bun tests/e2e/verify-telemetry.ts" };
 await emit("package.json", JSON.stringify(infra, null, 2) + "\n");
-await emit(".gitignore", "**/bin/\n**/obj/\nnode_modules/\n.alchemy/\n.packages/\n.env\n.env.*\n*.user\ntest-results/\nplaywright-report/\n");
+await emit(".gitignore", "**/bin/\n**/obj/\nnode_modules/\n**/local.machine.json\n.alchemy/\n.packages/\n.env\n.env.*\n*.user\ntest-results/\nplaywright-report/\n");
 await emit("AGENTS.md", (await readFile(resolve(root, "AGENTS.md"), "utf8")).replaceAll("local Todo app", "local app"));
 await cp(resolve(root, "templates/Flarestack.Templates/content"), output, { recursive: true });
-for (const file of ["accounts-and-email.md", "upgrading.md"]) await emit(`docs/${file}`, (await readFile(resolve(root, "docs", file), "utf8")).replaceAll("samples/Todo/", ""));
+for (const file of ["accounts-and-email.md", "upgrading.md", "developer-overview.md", "public-api.md", "security-model.md", "database.md", "validation.md", "cloud-preview.md"]) await emit(`docs/${file}`, (await readFile(resolve(root, "docs", file), "utf8")).replaceAll("samples/Todo/", ""));
 for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
-  const file = `${name}.0.1.0-local.1.nupkg`;
+  const file = `${name}.${version}.nupkg`;
   await mkdir(resolve(output, "artifacts/nuget"), { recursive: true });
   await cp(resolve(root, "artifacts/nuget", file), resolve(output, "artifacts/nuget", file));
 }

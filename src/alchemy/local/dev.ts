@@ -3,12 +3,15 @@ import { resolve, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LocalLogs, readLines } from "./logs.ts";
 
+import { protocolVersion, releaseVersion } from "../protocol.ts";
 import { startInbox } from "./inbox.ts";
 import { loadLocalApp } from "./config.ts";
 
 if (!process.argv[2]) throw new Error("Usage: dev.ts <local-app.json>");
 const app = loadLocalApp(process.argv[2]);
 const infra = app.infra;
+const contract = (await Bun.file(resolve(infra,"package.json")).json()).flarestack;
+if (contract?.protocol !== protocolVersion || contract?.release !== releaseVersion) throw new Error(`@flarestack/alchemy ${releaseVersion} expects infrastructure protocol ${protocolVersion} and the same release. Upgrade the complete package set.`);
 const logRoot = resolve(infra, ".alchemy/log");
 const started = new Date().toISOString();
 const dashboardUrl = "http://127.0.0.1:18888";
@@ -57,6 +60,7 @@ async function workerFiles(directory = logRoot): Promise<string[]> {
 }
 async function scanFiles(initial = false) {
   for (const path of await workerFiles()) {
+    try {
     const size = (await stat(path)).size;
     const state = files.get(path) ?? { offset: initial ? size : 0, pending: "", decoder: new TextDecoder() };
     if (size < state.offset) { state.offset = 0; state.pending = ""; state.decoder = new TextDecoder(); }
@@ -75,6 +79,11 @@ async function scanFiles(initial = false) {
       } finally { await handle.close(); }
     }
     files.set(path, state);
+    } catch (error) {
+      // Alchemy may rotate a file after enumeration or before open().
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      files.delete(path);
+    }
   }
 }
 const attached = new Set<string>();

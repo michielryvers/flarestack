@@ -1,6 +1,6 @@
 # FlarestackTemplate
 
-A .NET 10 Interactive Server Blazor Todo app with Better Auth OIDC, D1, and Aspire.
+A .NET 10 Blazor Web App using Interactive Server rendering with Better Auth OIDC, D1, and Aspire.
 The generated app includes versioned local framework packages; it does not need
 access to the Flarestack source repository.
 
@@ -24,12 +24,14 @@ background session. Razor/C# edits use hot reload in this default fast mode.
 
 To run another app alongside this one, stop it and use
 `bun run configure:local --port 9000` to assign eight consecutive ports. Auth
-origins and browser tests follow that configuration. `bun run doctor` checks tools
+origins and browser tests follow the gitignored `local.machine.json` override;
+committed defaults remain unchanged. Identical settings are a no-op. `bun run doctor` checks tools
 and local configuration. See [configuration and upgrades](docs/upgrading.md).
 
 Account recovery, profile/password settings, session management, and user
 administration are included. See [accounts and email](docs/accounts-and-email.md)
-for the explicit first-admin setup and .NET APIs. No default admin is created.
+for the first-admin setup through `FLARESTACK_ADMIN_USER_IDS` and the .NET APIs.
+No default admin is created. See [session/security semantics](docs/security-model.md).
 
 ## Container mode
 

@@ -1,9 +1,17 @@
+import {protocolVersion,releaseVersion} from "../protocol.ts";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadLocalApp } from "./config.ts";
 if (!process.argv[2]) throw new Error("Usage: doctor.ts <local.json>");
 const app = loadLocalApp(process.argv[2]);
 let failed = false;
+const contract=(await Bun.file(resolve(app.infra,"package.json")).json()).flarestack;
+const compatible=contract?.protocol===protocolVersion&&contract?.release===releaseVersion;
+console.log(`${compatible?"OK":"FAIL"}: runtime ${releaseVersion}, protocol ${protocolVersion}; infrastructure contract`);failed ||= !compatible;
+for(const name of ["Flarestack.D1","Flarestack.Authentication","Flarestack.Email","Aspire.Hosting.Flarestack"]){
+ const ok=existsSync(resolve(app.root,`artifacts/nuget/${name}.${releaseVersion}.nupkg`));
+ console.log(`${ok?"OK":"FAIL"}: ${name} ${releaseVersion} artifact`);failed ||= !ok;
+}
 for (const [tool,...args] of [["bun","--version"],["dotnet","--list-sdks"],["aspire","--version"],...(process.env.Flarestack__LocalMode === "Container" ? [["docker","info","--format","{{.ServerVersion}}"]] : [])]) {
   try {
     const p=Bun.spawn([tool!,...args],{stdout:"pipe",stderr:"pipe"});

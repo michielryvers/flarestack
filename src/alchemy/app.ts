@@ -3,6 +3,7 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import type { DotNet } from "./worker.ts";
 import type { createAuthWorker } from "./auth.ts";
+import { protocolVersion } from "./protocol.ts";
 
 export interface FlarestackAppOptions {
   /** Stable stack identity; changing it creates different resources. */
@@ -49,6 +50,6 @@ export function FlarestackApp(options: FlarestackAppOptions) {
     Effect.gen(function* () {
       if (LocalBridge) yield* LocalBridge;
       const worker = yield* Worker;
-      return { url: worker.url, protocolVersion: 1 };
+      return { url: worker.url, protocolVersion };
     }));
 }

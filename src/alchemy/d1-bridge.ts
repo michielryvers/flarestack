@@ -1,8 +1,9 @@
+import { privateRequest } from "./protocol.ts";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 
-export async function d1Commands(request: Request, database: D1Database): Promise<Response> {
+async function d1CommandsCore(request: Request, database: D1Database): Promise<Response> {
   const correlationId = crypto.randomUUID();
-  const fail = (status: number, code: string) => Response.json({ protocolVersion: 1, ok: false, correlationId, error: { code, message: "Database command failed" } }, { status });
+  const fail = (status: number, code: string) => Response.json({ protocolVersion: 2, ok: false, correlationId, error: { code, message: "Database command failed" } }, { status });
   if (new URL(request.url).hostname !== "d1.internal" || new URL(request.url).pathname !== "/v1/commands") return fail(404, "NOT_FOUND");
   if (request.method !== "POST") return fail(405, "METHOD_NOT_ALLOWED");
   if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") return fail(415, "CONTENT_TYPE");
@@ -22,7 +23,7 @@ export async function d1Commands(request: Request, database: D1Database): Promis
     const bytes = new Uint8Array(size); let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     input = JSON.parse(new TextDecoder().decode(bytes));
-    if (!input || input.protocolVersion !== 1) return fail(400, "PROTOCOL_VERSION");
+    if (!input || input.protocolVersion !== 2) return fail(400, "PROTOCOL_VERSION");
   } catch { return fail(400, "INVALID_REQUEST"); }
   const commands = input.operation === "batch" ? input.commands : [input];
   if (!Array.isArray(commands) || commands.length < 1 || commands.length > 100) return fail(400, "COMMAND_COUNT");
@@ -45,9 +46,11 @@ export async function d1Commands(request: Request, database: D1Database): Promis
     const results = input.operation === "batch" ? await database.batch(statements) : [await statements[0]!.all()];
     const mapped = results.map((result, index) => ({ rowsAffected: result.meta.changes, rows: kinds[index] === "execute" ? [] : result.results }));
     if (input.operation === "querySingleOrDefault" && mapped[0]!.rows.length > 1) return fail(409, "CARDINALITY");
-    return Response.json({ protocolVersion: 1, ok: true, correlationId, ...(input.operation === "batch" ? { results: mapped } : mapped[0]) });
+    return Response.json({ protocolVersion: 2, ok: true, correlationId, ...(input.operation === "batch" ? { results: mapped } : mapped[0]) });
   } catch {
     console.error(JSON.stringify({ level: "ERROR", message: "D1 execution failed", correlationId, operation: input.operation }));
     return fail(500, "D1_EXECUTION_FAILED");
   }
 }
+
+export const d1Commands = (...args: Parameters<typeof d1CommandsCore>) => privateRequest(args[0], () => d1CommandsCore(...args));

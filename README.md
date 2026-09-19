@@ -139,8 +139,8 @@ exports of framework implementations. `samples/Todo/local.json` supplies paths,
 ports, stack name, build inputs and an optional preparation command; paths are
 relative to that file, and build inputs are relative to `buildRoot`.
 
-The AppHost calls `AddFlarestack` with a `FlarestackOptions` configuration file,
-runtime directory, mode and application resource name. The returned `Platform`
+The AppHost calls `AddFlarestack` with an infrastructure directory and optional
+mode/application settings; declared package scripts supply runtime commands. The returned `Platform`
 and optional `Application` builders allow further Aspire configuration. Container
 mode returns no host application resource. Apps expose `/health` and use the
 standard Flarestack account routes and OIDC callback paths.
@@ -162,7 +162,7 @@ See [compatibility notes](docs/compatibility.md) and the
 `Flarestack.D1`, `Flarestack.Authentication`, `Flarestack.Email`, and `Aspire.Hosting.Flarestack` into
 `artifacts/nuget`, packs `@flarestack/alchemy` into `artifacts/npm`, installs the
 sample's tarball dependency, and restores the solution. All five packages use
-`0.1.0-local.1`. Nothing is published.
+`0.1.0-local.2`. Nothing is published.
 
 The sample and AppHost use NuGet `PackageReference`s. Infrastructure imports
 `@flarestack/alchemy`, and Aspire starts the supervisor/watch scripts from the
@@ -195,7 +195,7 @@ sample. It carries the four local NuGet packages and npm tarball, so generated
 apps do not reference this repository or require unpublished packages from a registry.
 
 ```sh
-dotnet new install ./artifacts/templates/Flarestack.Templates.0.1.0-local.1.nupkg
+dotnet new install ./artifacts/templates/Flarestack.Templates.0.1.0-local.2.nupkg
 dotnet new flarestack-blazor -n MyApp
 cd MyApp
 bun install --frozen-lockfile
@@ -229,9 +229,11 @@ The starter includes email verification, password recovery, account/profile sett
 user administration and session revocation. Email stays in a local inbox linked
 from Aspire. New users verify their address through that inbox before signing in.
 See [accounts and email](docs/accounts-and-email.md) for the .NET APIs, explicit
-first-admin setup, auth extension hooks and the 30-second Blazor revocation window.
+first-admin setup, auth extension hooks and live Blazor session revalidation.
 
 `bun run doctor` checks prerequisites. With the AppHost stopped,
 `bun run configure:local --port 9000` assigns a block of eight ports and derives
 the auth origin automatically. See [configuration and upgrades](docs/upgrading.md).
 Live email sending and cloud deployment have not been exercised.
+
+Start with the [developer overview](docs/developer-overview.md), [public APIs](docs/public-api.md), and [security model](docs/security-model.md).

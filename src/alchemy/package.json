@@ -1,6 +1,6 @@
 {
   "name": "@flarestack/alchemy",
-  "version": "0.1.0-local.1",
+  "version": "0.1.0-local.2",
   "description": "Flarestack Workers, D1, authentication and local Aspire runtime",
   "type": "module",
   "private": true,

@@ -4,6 +4,7 @@ import { LocalLogs, readLines } from "../src/alchemy/local/logs.ts";
 
 const root = resolve(import.meta.dirname, "..");
 process.chdir(root);
+const {version} = await Bun.file(resolve(root,"version.json")).json();
 const running = Bun.spawn(["aspire", "describe", "--format", "Json", "--non-interactive"], { stdout: "pipe", stderr: "ignore" });
 const snapshot = await new Response(running.stdout).text();
 await running.exited;
@@ -49,18 +50,19 @@ try {
   }
   await mkdir("artifacts/nuget", { recursive: true });
   await mkdir("artifacts/npm", { recursive: true });
+  await run(["bun", "scripts/check-versions.ts"]);
   await run(["bun", "run", "build:auth-ui"]);
   for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
     await run(["dotnet", "pack", `src/${name}/${name}.csproj`, "-c", "Release", "-o", "artifacts/nuget", "--nologo"]);
     // Only clear our local-preview packages in this repository's private cache.
-    await rm(resolve(root, ".packages/nuget", name.toLowerCase(), "0.1.0-local.1"), { recursive: true, force: true });
+    await rm(resolve(root, ".packages/nuget", name.toLowerCase(), version), { recursive: true, force: true });
   }
-  await run(["bun", "pm", "pack", "--filename", resolve(root, "artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz"), "--ignore-scripts"], resolve(root, "src/alchemy"));
+  await run(["bun", "pm", "pack", "--filename", resolve(root, `artifacts/npm/flarestack-alchemy-${version}.tgz`), "--ignore-scripts"], resolve(root, "src/alchemy"));
   // Bun's --no-cache skips manifest caches, but can still reuse a locked local
   // tarball. Give every distinct archive a distinct path to invalidate it reliably.
-  const archive = resolve(root, "artifacts/npm/flarestack-alchemy-0.1.0-local.1.tgz");
+  const archive = resolve(root, `artifacts/npm/flarestack-alchemy-${version}.tgz`);
   const digest = new Bun.CryptoHasher("sha256").update(await readFile(archive)).digest("hex").slice(0, 16);
-  const filename = `flarestack-alchemy-0.1.0-local.1-${digest}.tgz`;
+  const filename = `flarestack-alchemy-${version}-${digest}.tgz`;
   await copyFile(archive, resolve(root, "artifacts/npm", filename));
   const sample = resolve(root, "samples/Todo/infra");
   const manifestPath = resolve(sample, "package.json");

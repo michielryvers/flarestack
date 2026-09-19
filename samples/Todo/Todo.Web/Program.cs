@@ -10,7 +10,7 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddFlarestackD1(builder.Configuration);
 builder.Services.AddFlarestackEmail(builder.Configuration);
-builder.Services.AddFlarestackAuthentication(builder.Configuration, builder.Environment);
+builder.Services.AddFlarestackAuthentication(builder.Configuration);
 builder.Services.AddScoped<TodoRepository>();
 builder.Services.Configure<ForwardedHeadersOptions>(options => {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
@@ -25,7 +25,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
-app.MapFlarestackAccountEndpoints("/todos");
+app.MapFlarestackAccountEndpoints(options => options.DefaultReturnPath = "/todos");
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.Run();

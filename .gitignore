@@ -492,3 +492,5 @@ node_modules/
 .tools/
 
 .packages/
+
+**/local.machine.json

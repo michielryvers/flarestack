@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const archive = resolve(root, "artifacts/templates/Flarestack.Templates.0.1.0-local.1.nupkg");
+const {version} = await Bun.file(resolve(root,"version.json")).json();
+const archive = resolve(root, `artifacts/templates/Flarestack.Templates.${version}.nupkg`);
 async function dotnet(args: string[]) {
   const command = Bun.spawn(["dotnet", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, code] = await Promise.all([new Response(command.stdout).text(), new Response(command.stderr).text(), command.exited]);
@@ -42,11 +43,11 @@ test.each([
     expect(await Bun.file(join(directory, config.appHost.path)).exists()).toBe(true);
     const manifest = await Bun.file(join(directory, "package.json")).json();
     expect(manifest.name).toBe(`app-${slug}`);
-    expect(await readFile(join(directory, "infra/auth.ts"), "utf8")).toContain("adminUserIds: []");
+    expect(await readFile(join(directory, "infra/auth.ts"), "utf8")).not.toContain("adminUserIds:");
     expect(await Bun.file(join(directory, "docs/accounts-and-email.md")).exists()).toBe(true);
     for (const patch of Object.values(manifest.patchedDependencies) as string[])
       expect(await readFile(join(directory, patch))).toEqual(await readFile(join(root, patch)));
-    for (const path of [manifest.dependencies["@flarestack/alchemy"].replace("file:artifacts/", ""), "nuget/Flarestack.D1.0.1.0-local.1.nupkg", "nuget/Flarestack.Email.0.1.0-local.1.nupkg", "nuget/Flarestack.Authentication.0.1.0-local.1.nupkg", "nuget/Aspire.Hosting.Flarestack.0.1.0-local.1.nupkg"])
+    for (const path of [manifest.dependencies["@flarestack/alchemy"].replace("file:artifacts/", ""), `nuget/Flarestack.D1.${version}.nupkg`, `nuget/Flarestack.Email.${version}.nupkg`, `nuget/Flarestack.Authentication.${version}.nupkg`, `nuget/Aspire.Hosting.Flarestack.${version}.nupkg`])
       expect(await readFile(join(directory, "artifacts", path))).toEqual(await readFile(join(root, "artifacts", path)));
     expect(await readdir(join(directory, "infra"))).not.toContain(".alchemy");
     expect(await readdir(directory)).not.toContain(".template.config");

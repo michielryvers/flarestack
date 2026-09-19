@@ -1,6 +1,7 @@
+import { privateRequest } from "./protocol.ts";
 import { serializeSignedCookie } from "better-call";
 import type { Auth } from "better-auth";
-import { authOptions, type AuthFeatures } from "./auth-options.ts";
+import { authOptions, type ResolvedAuthFeatures } from "./auth-options.ts";
 
 type FullAuth = Auth<ReturnType<typeof authOptions>>;
 type AppAuth = Pick<FullAuth, "api"> & { $context: Promise<
@@ -8,7 +9,7 @@ type AppAuth = Pick<FullAuth, "api"> & { $context: Promise<
     adapter: { findOne<T>(query: {model: string; where: {field: string; value: string}[]}): Promise<T | null> }
   }> };
 // Only reachable through private bindings or the token-protected loopback bridge.
-export async function internalAuth(request: Request, auth: AppAuth, features: AuthFeatures = {}) {
+async function internalAuthCore(request: Request, auth: AppAuth, features: ResolvedAuthFeatures = {}) {
   if (request.method !== "POST") return new Response(null, {status:405});
   let input: {userId?: string; sessionId?: string; [key: string]: unknown};
   try { const text = await request.text(); if(text.length > 16_384) return new Response(null,{status:413}); input = JSON.parse(text); }
@@ -46,3 +47,5 @@ export async function internalAuth(request: Request, auth: AppAuth, features: Au
     return Response.json({success:true});
   } catch { return Response.json({error:"admin_operation_failed"},{status:400}); }
 }
+
+export const internalAuth = (...args: Parameters<typeof internalAuthCore>) => privateRequest(args[0], () => internalAuthCore(...args));

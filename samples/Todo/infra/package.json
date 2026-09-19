@@ -3,11 +3,20 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.1-61e8dabca140f3b4.tgz",
+    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-90f37ab9bb1c1afa.tgz",
     "alchemy": "2.0.0-beta.79"
   },
   "patchedDependencies": {
     "alchemy@2.0.0-beta.79": "../../../patches/alchemy@2.0.0-beta.79.patch",
     "@alchemy.run/cloudflare-runtime@2.0.0-beta.79": "../../../patches/cloudflare-runtime@2.0.0-beta.79.patch"
+  },
+  "flarestack": {
+    "configuration": "../local.json",
+    "release": "0.1.0-local.2",
+    "protocol": 2
+  },
+  "scripts": {
+    "flarestack:dev": "bun node_modules/@flarestack/alchemy/local/dev.ts ../local.json",
+    "flarestack:watch": "bun node_modules/@flarestack/alchemy/local/watch-dotnet.ts ../Todo.Web/Todo.Web.csproj"
   }
 }

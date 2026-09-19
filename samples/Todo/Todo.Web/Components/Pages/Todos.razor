@@ -37,7 +37,7 @@
     private IEnumerable<TodoItem> Visible => _items.Where(x => _filter == "All" || x.IsComplete == (_filter == "Completed"));
     protected override async Task OnInitializedAsync() {
         _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
-        try { _items = await Repository.ListAsync(_user); } catch { _error = "Unable to load your tasks. Please reload to try again."; }
+        try { _items = await Repository.ListAsync(); } catch { _error = "Unable to load your tasks. Please reload to try again."; }
         finally { _loading = false; }
     }
     private async Task Change(Func<Task> action) {
@@ -45,12 +45,12 @@
         if (_busy || _user.Identity?.IsAuthenticated != true) return;
         _busy = true; _error = null;
         using var activity = TodoTelemetry.Source.StartActivity("Todo change");
-        try { await action(); _items = await Repository.ListAsync(_user); }
+        try { await action(); _items = await Repository.ListAsync(); }
         catch (ArgumentException error) { _error = error.Message; }
         catch { activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error); _error = "Unable to save your change. Please try again."; }
         finally { _busy = false; }
     }
-    private Task Add() => Change(async () => { await Repository.AddAsync(_user!, _title); _title = ""; });
-    private Task Toggle(TodoItem item) => Change(async () => { await Repository.SetCompleteAsync(_user!, item.Id, !item.IsComplete); });
-    private Task Delete(TodoItem item) => Change(async () => { await Repository.DeleteAsync(_user!, item.Id); });
+    private Task Add() => Change(async () => { await Repository.AddAsync(_title); _title = ""; });
+    private Task Toggle(TodoItem item) => Change(async () => { await Repository.SetCompleteAsync(item.Id, !item.IsComplete); });
+    private Task Delete(TodoItem item) => Change(async () => { await Repository.DeleteAsync(item.Id); });
 }

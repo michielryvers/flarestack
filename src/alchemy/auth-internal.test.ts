@@ -15,7 +15,7 @@ test("internal administration checks live sessions, roles and revocation", async
     const admin = await ctx.internalAdapter.createUser({id:"bootstrap",name:"Admin",email:"admin@example.test",emailVerified:true},{method:"admin"});
     const user = await ctx.internalAdapter.createUser({name:"User",email:"user@example.test",emailVerified:true},{method:"admin"});
     const a = await ctx.internalAdapter.createSession(admin.id,false); const u = await ctx.internalAdapter.createSession(user.id,false);
-    const call = (op:string, actor = {userId:admin.id,sessionId:a.id}, body = {}) => internalAuth(new Request(`http://auth.internal/_flarestack/internal/${op}`,{method:"POST",body:JSON.stringify({...actor,...body})}),auth,features);
+    const call = (op:string, actor = {userId:admin.id,sessionId:a.id}, body = {}) => internalAuth(new Request(`http://auth.internal/_flarestack/internal/${op}`,{method:"POST",headers:{"x-flarestack-protocol":"2"},body:JSON.stringify({...actor,...body})}),auth,features);
     expect((await call("users",{userId:user.id,sessionId:u.id})).status).toBe(403);
     expect((await call("users",{userId:admin.id,sessionId:u.id})).status).toBe(401);
     expect((await call("users")).status).toBe(200);
@@ -29,5 +29,8 @@ test("internal administration checks live sessions, roles and revocation", async
     const u2 = await ctx.internalAdapter.createSession(user.id,false);
     expect((await call("revoke",undefined,{targetUserId:user.id})).status).toBe(200);
     expect((await call("session",{userId:user.id,sessionId:u2.id})).status).toBe(401);
+    const expired = await ctx.internalAdapter.createSession(user.id,false);
+    await ctx.internalAdapter.updateSession(expired.token,{expiresAt:new Date(0)});
+    expect((await call("session",{userId:user.id,sessionId:expired.id})).status).toBe(401);
   } finally {database.close();}
 });

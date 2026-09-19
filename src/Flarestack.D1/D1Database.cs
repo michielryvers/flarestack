@@ -45,7 +45,7 @@ public static class D1Registration
         var bridgeToken = configuration["Flarestack:LocalBridgeToken"];
         if (!string.IsNullOrEmpty(bridgeToken) && !uri.IsLoopback) throw new InvalidOperationException("Local bridge credentials require a loopback D1 address.");
         services.AddSingleton(options);
-        services.AddHttpClient<ID1Database, D1Database>(client => { client.BaseAddress = uri; client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds); if (!string.IsNullOrEmpty(bridgeToken)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", bridgeToken); });
+        services.AddHttpClient<ID1Database, D1Database>(client => { Flarestack.Internal.Protocol.Configure(client); client.BaseAddress = uri; client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds); if (!string.IsNullOrEmpty(bridgeToken)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", bridgeToken); });
         return services;
     }
 }
@@ -113,12 +113,13 @@ public sealed class D1Database(HttpClient client, D1Options options, ILogger<D1D
             activity.SetTag("db.query.text", sql.Length <= maxSqlLength ? sql : sql[..maxSqlLength] + " /* truncated */");
         }
         var payload = fields.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value);
-        payload["protocolVersion"] = 1; payload["operation"] = operation;
+        payload["protocolVersion"] = 2; payload["operation"] = operation;
         var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
         if (bytes.Length > options.MaxRequestBytes) throw new ArgumentException("D1 request exceeds configured size limit.");
         using var content = new ByteArrayContent(bytes);
         content.Headers.ContentType = new("application/json");
         using var response = await client.PostAsync("/v1/commands", content, ct);
+        Flarestack.Internal.Protocol.Ensure(response, "Flarestack.D1");
         var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
         if (!response.IsSuccessStatusCode || !document.RootElement.GetProperty("ok").GetBoolean())
         {

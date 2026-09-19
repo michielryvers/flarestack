@@ -40,7 +40,7 @@
     protected override Task OnInitializedAsync() => Load();
     private async Task Load() {
         busy = true;
-        try { result = await Administration.ListAsync((await Authentication.GetAuthenticationStateAsync()).User, search, offset); }
+        try { result = await Administration.ListAsync(search, offset); }
         catch { status = "Unable to load users. Your session or permissions may have changed."; }
         finally { busy = false; }
     }
@@ -50,11 +50,10 @@
     private async Task Change(AdminUser user, string operation) {
         busy = true; status = "";
         try {
-            var actor = (await Authentication.GetAuthenticationStateAsync()).User;
-            if (operation == "revoke") await Administration.RevokeSessionsAsync(actor, user.Id);
-            else if (operation == "role") await Administration.SetRoleAsync(actor, user.Id, user.Role == "admin" ? "user" : "admin");
-            else await Administration.SetDisabledAsync(actor, user.Id, operation == "disable");
-            status = "User updated.";
+            if (operation == "revoke") await Administration.RevokeSessionsAsync( user.Id);
+            else if (operation == "role") await Administration.SetRoleAsync(user.Id, user.Role == "admin" ? UserRole.User : UserRole.Admin);
+            else await Administration.SetDisabledAsync( user.Id, operation == "disable");
+            status = operation == "revoke" ? "Sessions revoked." : "User updated.";
         } catch { status = "Change refused. Check your permissions; your own account and bootstrap administrators are protected."; }
         finally { busy = false; }
         await Load();

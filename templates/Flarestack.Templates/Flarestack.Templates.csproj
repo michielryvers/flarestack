@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>Flarestack.Templates</PackageId>
-    <Version>0.1.0-local.1</Version>
+    <Version>0.1.0-local.2</Version>
     <Authors>Flarestack contributors</Authors>
     <Description>Local Flarestack Blazor starter with Aspire, Better Auth and D1.</Description>
     <PackageType>Template</PackageType>

@@ -32,3 +32,15 @@ test.each([
 ])("rejects unsafe or conflicting local settings %j", overrides => {
   withConfig(overrides, path => expect(() => loadLocalApp(path)).toThrow());
 });
+
+test("machine overrides change ports without replacing committed identity", () => {
+  withConfig({}, (path, directory) => {
+    writeFileSync(join(directory,"local.machine.json"),JSON.stringify({publicOrigin:"http://localhost:9200",bridgePort:9201,inboxPort:9202,relayPort:9203}));
+    const app=loadLocalApp(path);expect(app.port).toBe(9200);expect(app.stackName).toBe("notes");
+    writeFileSync(join(directory,"local.machine.json"),JSON.stringify({stackName:"different"}));
+    expect(()=>loadLocalApp(path)).toThrow("Only port/origin");
+  });
+});
+test("machine overrides cannot duplicate a listener port",()=>{
+ withConfig({},(path,directory)=>{writeFileSync(join(directory,"local.machine.json"),JSON.stringify({inboxPort:9000}));expect(()=>loadLocalApp(path)).toThrow();});
+});

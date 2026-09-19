@@ -1,3 +1,4 @@
+import {checkProtocol,protocolHeaders} from "./protocol.ts";
 import type { D1Database } from "@cloudflare/workers-types";
 import { d1Commands } from "./d1-bridge.ts";
 import { tracedRequest } from "./tracing.ts";
@@ -11,7 +12,8 @@ interface Env {
 }
 // Created only in explicitly selected fast local mode, on a loopback listener.
 export default { async fetch(request: Request, env: Env): Promise<Response> {
-  if (!env.LOCAL_BRIDGE_TOKEN || request.headers.get("x-flarestack-bridge") !== env.LOCAL_BRIDGE_TOKEN) return new Response(null, { status: 403 });
+  if (!env.LOCAL_BRIDGE_TOKEN || request.headers.get("x-flarestack-bridge") !== env.LOCAL_BRIDGE_TOKEN) return new Response(null, { status: 403, headers:protocolHeaders });
+  const mismatch = checkProtocol(request); if (mismatch) return mismatch;
   const url = new URL(request.url);
   const headers = new Headers(request.headers); headers.delete("x-flarestack-bridge");
   if (url.pathname === "/v1/email" && env.Email) return env.Email.fetch(new Request(request, {headers}));

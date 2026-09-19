@@ -9,7 +9,7 @@ public class EmailTests
     {
         public int Requests;
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
-        { Requests++; return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.BadGateway)); }
+        { Requests++; var response = new HttpResponseMessage(System.Net.HttpStatusCode.BadGateway); response.Headers.Add("x-flarestack-protocol","2"); return Task.FromResult(response); }
     }
     [Fact]
     public async Task RejectsHeaderInjectionBeforeTransport()

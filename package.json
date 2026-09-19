@@ -16,7 +16,10 @@
     "prepare:local": "bun scripts/prepare-local.ts",
     "test:template": "bun test scripts/template.test.ts",
     "configure:local": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/configure.ts samples/Todo/local.json",
-    "doctor": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/doctor.ts samples/Todo/local.json"
+    "doctor": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/doctor.ts samples/Todo/local.json",
+    "test:acceptance": "bun scripts/accept-template.ts",
+    "check:versions": "bun scripts/check-versions.ts",
+    "smoke:cloud": "bun scripts/smoke-cloud.ts"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",

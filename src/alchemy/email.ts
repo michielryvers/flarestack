@@ -1,3 +1,4 @@
+import { privateRequest } from "./protocol.ts";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
@@ -19,7 +20,7 @@ export function createEmailWorker(options: EmailWorkerOptions) {
       const request = yield* HttpServerRequest.toWeb(req).pipe(Effect.orDie);
       const raw = yield* email.raw;
       const env = yield* Cloudflare.WorkerEnvironment;
-      const response = yield* Effect.promise(() => tracedRequest("flarestack.email", request, async r => {
+      const response = yield* Effect.promise(() => tracedRequest("flarestack.email", request, r => privateRequest(r, async () => {
         if (new URL(r.url).pathname !== "/v1/email" || r.method !== "POST") return new Response(null, {status: 404});
         const body = await r.text();
         if (body.length > 150_000) return new Response(null, {status: 413});
@@ -35,7 +36,7 @@ export function createEmailWorker(options: EmailWorkerOptions) {
           console.error(JSON.stringify({message: "Email delivery failed", level: "ERROR"}));
           return Response.json({error: "email_delivery_failed"}, {status: 502});
         }
-      }, env as Record<string, string>));
+      }), env as Record<string, string>));
       return HttpServerResponse.fromWeb(response);
     }) };
   }).pipe(Effect.provide(Cloudflare.Email.SendBinding)));

@@ -11,14 +11,13 @@ export interface OAuthClientOptions {
 
 export interface AuthFeatures {
   requireEmailVerification?: boolean;
-  /** Explicit bootstrap identities; obtain your ID from Account settings. */
-  adminUserIds?: string[];
   /** Additional plugins participate in the same automatic schema migration. */
   plugins?: BetterAuthPlugin[];
   databaseHooks?: BetterAuthOptions["databaseHooks"];
 }
+export type ResolvedAuthFeatures = AuthFeatures & { adminUserIds?: string[] };
 export type AuthEmailSender = (message: {to: string; subject: string; text: string}, request?: Request) => Promise<void>;
-export function authOptions(publicOrigin: string, client: OAuthClientOptions, provisioning = false, features: AuthFeatures = {}, sendEmail?: AuthEmailSender) {
+export function authOptions(publicOrigin: string, client: OAuthClientOptions, provisioning = false, features: ResolvedAuthFeatures = {}, sendEmail?: AuthEmailSender) {
   if (!client.clientId.trim() || !client.clientName.trim() || !client.resourceId.trim()) throw new Error("OAuth client id, name and resource id are required");
   const origin = new URL(publicOrigin);
   if (origin.origin !== publicOrigin || (origin.protocol !== "https:" &&

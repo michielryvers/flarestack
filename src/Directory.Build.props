@@ -1,11 +1,12 @@
 <Project>
   <Import Project="../Directory.Build.props" />
   <PropertyGroup>
-    <Version>0.1.0-local.1</Version>
+    <Version>0.1.0-local.2</Version>
     <Authors>Flarestack contributors</Authors>
     <Description>Flarestack framework for ASP.NET Core, Cloudflare D1 and Aspire local hosting.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
   <ItemGroup><None Include="$(MSBuildThisFileDirectory)PACKAGE_README.md" Pack="true" PackagePath="README.md" /></ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Aspire.Hosting.Flarestack'"><Compile Include="$(MSBuildThisFileDirectory)Shared/Protocol.cs" Link="Protocol.cs" /></ItemGroup>
 </Project>

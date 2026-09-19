@@ -7,5 +7,9 @@ test.each(["", "wrong-token"])("local bridge rejects missing or incorrect creden
  expect(response.status).toBe(403);
 });
 test("local bridge has no catch-all forwarding", async () => {
- expect((await bridge.fetch(new Request("http://127.0.0.1:8789/arbitrary", {headers:{"x-flarestack-bridge":env.LOCAL_BRIDGE_TOKEN}}),env)).status).toBe(404);
+ expect((await bridge.fetch(new Request("http://127.0.0.1:8789/arbitrary", {headers:{"x-flarestack-bridge":env.LOCAL_BRIDGE_TOKEN,"x-flarestack-protocol":"2"}}),env)).status).toBe(404);
+});
+
+test("local backchannel rejects an unversioned client", async () => {
+ expect((await bridge.fetch(new Request("http://127.0.0.1:8789/auth/token", {headers:{"x-flarestack-bridge":env.LOCAL_BRIDGE_TOKEN}}),env)).status).toBe(426);
 });

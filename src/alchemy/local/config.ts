@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve, relative, isAbsolute } from "node:path";
 
 export interface LocalAppOptions {
@@ -9,6 +9,10 @@ export interface LocalAppOptions {
   bridgePort: number;
   inboxPort?: number;
   relayPort?: number;
+  dashboardPort?: number;
+  otlpHttpPort?: number;
+  otlpGrpcPort?: number;
+  resourcePort?: number;
   buildRoot: string;
   buildContext: string;
   dockerfile: string;
@@ -18,6 +22,12 @@ export interface LocalAppOptions {
 
 export function loadLocalApp(path: string) {
   const options: LocalAppOptions = JSON.parse(readFileSync(path, "utf8"));
+  const machine = resolve(dirname(path), "local.machine.json");
+  if (existsSync(machine)) {
+    const overrides = JSON.parse(readFileSync(machine,"utf8"));
+    if(Object.keys(overrides).some(key=>!["publicOrigin","bridgePort","inboxPort","relayPort","dashboardPort","otlpHttpPort","otlpGrpcPort","resourcePort"].includes(key))) throw new Error("Only port/origin machine overrides are supported");
+    Object.assign(options, overrides);
+  }
   for (const key of ["stackName", "infrastructureDirectory", "project", "publicOrigin", "buildRoot", "buildContext", "dockerfile"] as const)
     if (typeof options[key] !== "string" || !options[key].trim()) throw new Error(`Missing local setting: ${key}`);
   if (!/^[a-z0-9-]+$/.test(options.stackName)) throw new Error("stackName must contain lowercase letters, digits or hyphens");
@@ -30,6 +40,8 @@ export function loadLocalApp(path: string) {
   if (!Number.isInteger(options.inboxPort) || options.inboxPort < 1 || options.inboxPort > 65535 || [options.bridgePort, Number(origin.port || 80)].includes(options.inboxPort)) throw new Error("inboxPort must be a distinct valid port");
   options.relayPort ??= 4319;
   if (!Number.isInteger(options.relayPort) || options.relayPort < 1 || options.relayPort > 65535 || [options.bridgePort, options.inboxPort, Number(origin.port || 80)].includes(options.relayPort)) throw new Error("relayPort must be a distinct valid port");
+  const ports = [Number(origin.port || 80),options.bridgePort,options.inboxPort,options.relayPort,...[options.dashboardPort,options.otlpHttpPort,options.otlpGrpcPort,options.resourcePort].filter(p=>p!==undefined)];
+  if(ports.some(p=>!Number.isInteger(p)||p!<1||p!>65535)||new Set(ports).size!==ports.length) throw new Error("Local ports must be valid and distinct");
   const base = dirname(resolve(path));
   const root = resolve(base, options.buildRoot);
   const context = resolve(root, options.buildContext);

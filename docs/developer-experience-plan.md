@@ -2,7 +2,7 @@
 
 Requested scope (local only; no Cloudflare deployment):
 
-- Email: reusable Worker transport, .NET IEmailSender, local inbox linked from
+- Email: reusable Worker transport, .NET IFlarestackEmailSender, local inbox linked from
   Aspire, tracing without message bodies/tokens, fast/container E2E.
 - Accounts: verification, password recovery, profile/password/session settings,
   auth configuration extension points, account enumeration-safe recovery.

@@ -37,12 +37,13 @@ public class CoreTests
     }
     [Fact] public async Task TodoMutationsAlwaysBindAuthenticatedOwner()
     {
-        var handler = new RecordingHandler("{\"ok\":true,\"rowsAffected\":1}"); var repo = new TodoRepository(Create(handler));
-        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "owner-a")], "test"));
-        await repo.SetCompleteAsync(user, "someone-elses-id", true);
+        var handler = new RecordingHandler("{\"ok\":true,\"rowsAffected\":1}"); var identity = new TestCurrentUser(); var repo = new TodoRepository(Create(handler), identity);
+
+        await repo.SetCompleteAsync( "someone-elses-id", true);
         Assert.Contains("owner_id=?", handler.Body); Assert.Contains("owner-a", handler.Body); Assert.Contains("someone-elses-id", handler.Body);
-        await repo.DeleteAsync(user, "someone-elses-id"); Assert.Contains("owner_id=?", handler.Body); Assert.Contains("owner-a", handler.Body);
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => repo.ListAsync(new ClaimsPrincipal()));
+        await repo.DeleteAsync( "someone-elses-id"); Assert.Contains("owner_id=?", handler.Body); Assert.Contains("owner-a", handler.Body);
+        identity.Valid = false;
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => repo.ListAsync());
     }
     [Theory]
     [InlineData(false)]
@@ -83,12 +84,13 @@ public class CoreTests
         }
         else Assert.Null(spans[^1].GetTagItem("db.query.text"));
     }
+    private sealed class TestCurrentUser : ICurrentUser { public bool Valid = true; public Task<ClaimsPrincipal> GetPrincipalAsync(CancellationToken ct = default) => Valid ? Task.FromResult(new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub","owner-a")],"test"))) : throw new UnauthorizedAccessException(); }
     private static D1Database Create(RecordingHandler handler, D1Options? options = null) => new(new HttpClient(handler) { BaseAddress = new("http://d1.internal") }, options ?? new(), NullLogger<D1Database>.Instance);
     public record Row(bool IsComplete, DateTimeOffset CreatedAt);
     private sealed class RecordingHandler(string response) : HttpMessageHandler
     {
         public string Response = response; public string Body = "";
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
-        { Body = await request.Content!.ReadAsStringAsync(token); return new(HttpStatusCode.OK) { Content = new StringContent(Response) }; }
+        { Body = await request.Content!.ReadAsStringAsync(token); var result = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Response) }; result.Headers.Add("x-flarestack-protocol", "2"); return result; }
     }
 }
