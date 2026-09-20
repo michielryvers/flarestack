@@ -8,9 +8,15 @@ let failed = false;
 const contract=(await Bun.file(resolve(app.infra,"package.json")).json()).flarestack;
 const compatible=contract?.protocol===protocolVersion&&contract?.release===releaseVersion;
 console.log(`${compatible?"OK":"FAIL"}: runtime ${releaseVersion}, protocol ${protocolVersion}; infrastructure contract`);failed ||= !compatible;
-for(const name of ["Flarestack.D1","Flarestack.Authentication","Flarestack.Email","Aspire.Hosting.Flarestack"]){
- const ok=existsSync(resolve(app.root,`artifacts/nuget/${name}.${releaseVersion}.nupkg`));
- console.log(`${ok?"OK":"FAIL"}: ${name} ${releaseVersion} artifact`);failed ||= !ok;
+const localFeed = resolve(app.root, "artifacts/nuget");
+if (existsSync(localFeed)) {
+  for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
+    const ok = existsSync(resolve(localFeed, `${name}.${releaseVersion}.nupkg`));
+    console.log(`${ok ? "OK" : "FAIL"}: ${name} ${releaseVersion} local artifact`);
+    failed ||= !ok;
+  }
+} else {
+  console.log("INFO: registry package mode; dotnet restore resolves the pinned .NET packages.");
 }
 for (const [tool,...args] of [["bun","--version"],["dotnet","--list-sdks"],["aspire","--version"],...(process.env.Flarestack__LocalMode === "Container" ? [["docker","info","--format","{{.ServerVersion}}"]] : [])]) {
   try {
@@ -20,7 +26,7 @@ for (const [tool,...args] of [["bun","--version"],["dotnet","--list-sdks"],["asp
     console.log(`${ok ? "OK" : "FAIL"}: ${tool}${ok ? " available" : " missing or unsupported"}`);failed ||= !ok;
   } catch {console.log(`FAIL: ${tool} not found on PATH`);failed=true;}
 }
-for(const path of [app.projectPath,resolve(app.infra,"alchemy.run.ts"),resolve(app.root,"artifacts/nuget"),resolve(app.root,"NuGet.Config")]) {
+for(const path of [app.projectPath,resolve(app.infra,"alchemy.run.ts"),resolve(app.root,"NuGet.Config")]) {
   const ok=existsSync(path);console.log(`${ok ? "OK" : "FAIL"}: ${path}`);failed ||= !ok;
 }
 console.log(`Local configuration valid: ${app.publicOrigin}; bridge ${app.bridgePort}; inbox ${app.inboxPort}. Docker required only in Container mode.`);

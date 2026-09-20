@@ -2,6 +2,7 @@ import {readFile,writeFile} from "node:fs/promises";
 import {dirname,resolve} from "node:path";
 import {createServer} from "node:net";
 import {loadLocalApp} from "./config.ts";
+import {relayHost} from "./platform.ts";
 const [file,flag,value]=process.argv.slice(2);
 if(!file||flag!=="--port")throw new Error("Usage: configure.ts <local.json> --port <base-port>");
 const port=Number(value);
@@ -18,7 +19,7 @@ if(snapshot.trim().startsWith("{"))throw new Error("Stop this AppHost before cha
 const listeners:ReturnType<typeof createServer>[]=[];
 try {
   // Hold all sockets until validation finishes. This detects conflicts, not a permanent reservation.
-  for(let p=port;p<port+8;p++)for(const host of p===port+3?["172.17.0.1"]:["127.0.0.1","::1"]){
+  for(let p=port;p<port+8;p++)for(const host of p===port+3?(process.env.Flarestack__LocalMode === "Container" ? [relayHost()] : []):["127.0.0.1","::1"]){
     const server=createServer();
     try {await new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen({port:p,host,ipv6Only:true},resolve);});listeners.push(server);}
     catch(error){server.close();if((error as NodeJS.ErrnoException).code==="EADDRNOTAVAIL")continue;throw new Error(`Port ${p} on ${host} is unavailable; choose another block.`);}

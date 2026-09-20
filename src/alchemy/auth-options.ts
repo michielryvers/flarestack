@@ -17,7 +17,7 @@ export interface AuthFeatures {
 }
 export type ResolvedAuthFeatures = AuthFeatures & { adminUserIds?: string[] };
 export type AuthEmailSender = (message: {to: string; subject: string; text: string}, request?: Request) => Promise<void>;
-export function authOptions(publicOrigin: string, client: OAuthClientOptions, provisioning = false, features: ResolvedAuthFeatures = {}, sendEmail?: AuthEmailSender) {
+export function authOptions(publicOrigin: string, client: OAuthClientOptions, provisioning = false, features: ResolvedAuthFeatures = {}, sendEmail?: AuthEmailSender, socialProviders?: BetterAuthOptions["socialProviders"]) {
   if (!client.clientId.trim() || !client.clientName.trim() || !client.resourceId.trim()) throw new Error("OAuth client id, name and resource id are required");
   const origin = new URL(publicOrigin);
   if (origin.origin !== publicOrigin || (origin.protocol !== "https:" &&
@@ -26,6 +26,7 @@ export function authOptions(publicOrigin: string, client: OAuthClientOptions, pr
   }
   if (features.plugins?.some(p => ["admin", "jwt", "oauth-provider"].includes(p.id))) throw new Error("Core auth plugins cannot be replaced through additional plugins");
   return {
+    socialProviders,
     databaseHooks: provisioning ? undefined : features.databaseHooks,
     baseURL: publicOrigin,
     advanced: { cookiePrefix: `flarestack.${encodeURIComponent(client.clientId)}` },

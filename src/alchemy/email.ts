@@ -1,5 +1,7 @@
+/// <reference path="./cloudflare-email.d.ts" />
 import { privateRequest } from "./protocol.ts";
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Redacted from "effect/Redacted";
 import * as Effect from "effect/Effect";
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
@@ -12,7 +14,7 @@ export function createEmailWorker(options: EmailWorkerOptions) {
   return Cloudflare.Worker("Email", { main: options.main, workersDev: false,
     observability: { enabled: true },
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
-    env: { FLARESTACK_EMAIL_FROM: options.from, OTEL_EXPORTER_OTLP_ENDPOINT: process.env.FLARESTACK_DEPLOY === "1" ? (process.env.FLARESTACK_CLOUD_OTLP_ENDPOINT ?? "") : process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318", OTEL_EXPORTER_OTLP_HEADERS: process.env.FLARESTACK_DEPLOY === "1" ? "" : process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "" },
+    env: { FLARESTACK_EMAIL_FROM: options.from, OTEL_EXPORTER_OTLP_ENDPOINT: process.env.FLARESTACK_DEPLOY === "1" ? (process.env.FLARESTACK_CLOUD_OTLP_ENDPOINT ?? "") : process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318", OTEL_EXPORTER_OTLP_HEADERS: process.env.FLARESTACK_DEPLOY === "1" ? Redacted.make(process.env.FLARESTACK_CLOUD_OTLP_HEADERS ?? "") : process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "" },
   }, Effect.gen(function* () {
     const descriptor = yield* Cloudflare.Email.SendEmail("EMAIL", { allowedSenderAddresses: [options.from] });
     const email = yield* Cloudflare.Email.Send(descriptor);

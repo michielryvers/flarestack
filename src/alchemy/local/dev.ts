@@ -1,6 +1,9 @@
 import { readdir, stat, open, cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomBytes } from "node:crypto";
+import { alchemyEnvironment, pathParts, relayHost, stopProcess, workerLogService } from "./platform.ts";
+import { relayHandler } from "./relay.ts";
 import { LocalLogs, readLines } from "./logs.ts";
 
 import { protocolVersion, releaseVersion } from "../protocol.ts";
@@ -17,6 +20,7 @@ const started = new Date().toISOString();
 const dashboardUrl = "http://127.0.0.1:18888";
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318";
 const fast = process.env.FLARESTACK_LOCAL_MODE === "Fast";
+const relayToken = fast ? "" : randomBytes(32).toString("hex");
 const external = process.env.FLARESTACK_EXTERNAL_OTLP === "1";
 if (!external && endpoint !== "http://127.0.0.1:4318") throw new Error("Set FLARESTACK_EXTERNAL_OTLP=1 to use an existing collector");
 const logs = new LocalLogs(endpoint);
@@ -32,7 +36,7 @@ process.on("SIGTERM", stop);
 function spawn(command: string[], service: string, cwd = infra, echo = true) {
   const child = Bun.spawn(command, {
     cwd, stdout: "pipe", stderr: "pipe",
-    env: { ...process.env, PUBLIC_ORIGIN: process.env.PUBLIC_ORIGIN ?? app.publicOrigin, ALCHEMY_TELEMETRY_DISABLED: "1", NO_COLOR: "1" },
+    env: { ...(service === "flarestack.alchemy" ? alchemyEnvironment(app.root, process.env) : process.env), PUBLIC_ORIGIN: process.env.PUBLIC_ORIGIN ?? app.publicOrigin, ALCHEMY_TELEMETRY_DISABLED: "1", NO_COLOR: "1", FLARESTACK_LOCAL_OTLP_HEADERS: relayToken ? `x-flarestack-relay=${relayToken}` : "" },
   });
   children.add(child);
   for (const [stream, name] of [[child.stdout, "stdout"], [child.stderr, "stderr"]] as const) {
@@ -54,7 +58,7 @@ async function workerFiles(directory = logRoot): Promise<string[]> {
   const nested = await Promise.all(entries.map(async entry => {
     const path = resolve(directory, entry.name);
     if (entry.isDirectory()) return workerFiles(path);
-    return entry.isFile() && /\/(Edge|Auth|LocalBridge|Email)\/[^/]+\.log$/.test(path) ? [path] : [];
+    return entry.isFile() && workerLogService(path) !== undefined ? [path] : [];
   }));
   return nested.flat();
 }
@@ -73,7 +77,7 @@ async function scanFiles(initial = false) {
         state.pending += state.decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
         const lines = state.pending.split("\n");
         state.pending = lines.pop() ?? "";
-        const service = path.includes("/Email/") ? "flarestack.email" : path.includes("/Auth/") ? "flarestack.auth" : "flarestack.worker";
+        const service = workerLogService(path)!;
         for (const line of lines) logs.emit(service, line, "stdout", { "log.file.path": relative(infra, path) });
         if (state.pending.length > 65536) { logs.emit(service, state.pending.slice(0, 65536)); state.pending = ""; }
       } finally { await handle.close(); }
@@ -107,13 +111,10 @@ async function scanContainers() {
   for (const line of output.trim().split("\n")) attachContainer(line);
 }
 
-// Private Docker-host relay: Aspire itself remains loopback-only.
-const relay = fast ? undefined : Bun.serve({ hostname: "172.17.0.1", port: app.relayPort!, maxRequestBodySize: 4 * 1024 * 1024,
-  async fetch(request) {
-    const path = new URL(request.url).pathname;
-    if (request.method !== "POST" || !["/v1/logs", "/v1/traces", "/v1/metrics"].includes(path)) return new Response(null, { status: 404 });
-    return fetch(endpoint + path, { method: "POST", headers: { "content-type": request.headers.get("content-type") ?? "application/x-protobuf", ...Object.fromEntries((process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "").split(",").filter(Boolean).map(pair => { const i = pair.indexOf("="); return [pair.slice(0, i), decodeURIComponent(pair.slice(i + 1))]; })) }, body: await request.arrayBuffer(), signal: AbortSignal.timeout(5000) });
-  }
+// The relay requires a per-run credential even when a Docker host interface is used.
+const relay = fast ? undefined : Bun.serve({
+  hostname: relayHost(), port: app.relayPort!, maxRequestBodySize: 4 * 1024 * 1024,
+  fetch: relayHandler(endpoint, relayToken, process.env.OTEL_EXPORTER_OTLP_HEADERS ?? ""),
 });
 let exitCode = 0;
 let dashboard: Bun.Subprocess | undefined;
@@ -145,7 +146,7 @@ try {
   await rm(buildContext, { recursive: true, force: true });
   await mkdir(buildContext, { recursive: true });
   for (const source of app.buildSources) {
-    await cp(resolve(root, source), resolve(buildContext, source), { recursive: true, filter: path => !path.split("/").some(part => ["bin", "obj", ".alchemy", "node_modules"].includes(part)) });
+    await cp(resolve(root, source), resolve(buildContext, source), { recursive: true, filter: path => !pathParts(path).some(part => ["bin", "obj", ".alchemy", "node_modules"].includes(part)) });
   }
   // The public OIDC issuer is an identity, not an outbound connection URL.
   // Alchemy rewrites loopback URLs in Docker env, so stage it as app configuration.
@@ -173,14 +174,14 @@ try {
   stopping = true;
   // Stop producers first, collect their final lines, then flush OTLP before dashboard teardown.
   const producers = [...children].filter(child => child !== dashboard);
-  for (const child of producers) child.kill("SIGINT");
+  await Promise.all(producers.map(child => stopProcess(child)));
   await Promise.race([Promise.all(producers.map(child => child.exited)), Bun.sleep(5000)]);
-  for (const child of producers) if (child.exitCode === null) child.kill("SIGKILL");
+  await Promise.all(producers.map(child => stopProcess(child, true)));
   await scanFiles().catch(() => {});
   await logs.shutdown();
   relay?.stop();
   inbox?.stop();
-  dashboard?.kill("SIGINT");
+  if (dashboard) await stopProcess(dashboard);
   await Promise.race([Promise.all(readers), Bun.sleep(2000)]);
 }
 process.exitCode = exitCode;
