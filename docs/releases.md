@@ -73,7 +73,7 @@ rejects a private package and remaining repository patch requirements. Removing
 only a template patch declaration cannot bypass the repository gate.
 
 Resolve the upstream readiness-order, SQLite-startup and credential-free local
-provider fixes before removing the patches. Then add and validate registry-based staging with no bundled archives,
+provider fixes and protected apply support before removing the patches. Then add and validate registry-based staging with no bundled archives,
 including fresh restore, restart and migration acceptance. Do not publish a partial
 package set as a supported starter experience merely to bypass these constraints.
 

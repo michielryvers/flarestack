@@ -2,6 +2,10 @@ import { lstat, mkdir, readdir, copyFile, rm } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { DeploymentError } from "./config.ts";
 
+export function assertDeploymentSafetySupport(version: unknown) {
+  if (version !== 1) throw new DeploymentError("The required Flarestack deployment safety patch is missing. Restore the generated pinned dependencies before deploying.");
+}
+
 export function parseArguments(args: string[]) {
   const [configuration, action, ...flags] = args;
   if (!configuration || !["deploy", "plan", "destroy"].includes(action ?? "")) throw new DeploymentError("Usage: deploy/cli.ts <local.json> deploy|plan|destroy --environment staging|production [--confirm <stack-stage>]");

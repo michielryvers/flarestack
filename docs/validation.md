@@ -29,7 +29,7 @@ export, or session persistence across container replacement. The earlier
 ## Reproduction
 
 Preview `0.1.0-local.2` uses protocol 2. Current verification includes **177 .NET
-tests**, **162 Bun tests**, TypeScript checking and two packed-template generation
+tests**, **170 Bun tests**, TypeScript checking and two packed-template generation
 tests (832 assertions). Fresh Fast and Container applications with the same name
 were generated outside the repository and run concurrently on separate port
 blocks. Both passed administration, recovery, Todo isolation, migration/data

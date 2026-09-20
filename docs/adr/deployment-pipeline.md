@@ -72,3 +72,22 @@ The committed stack name and explicit Alchemy stage identify infrastructure acro
 This durable Better Auth secret is separate from the container's ASP.NET Data Protection keys. The current container keys are ephemeral. Production therefore requires the explicit `allowEphemeralDataProtectionKeys` acknowledgement because container replacement can require fresh sign-in even while D1 data and Better Auth state remain intact.
 
 The automatic deployment smoke check covers discovery issuer/endpoints, edge/container health, and rejection of private bridge routes. It does not prove a complete browser login, email delivery, or application CRUD workflow; those require separate acceptance checks against the selected deployment.
+
+
+## Destructive deployment plans
+
+A separate destroy command is insufficient on its own: Alchemy also removes
+orphaned declarations and obsolete replacement generations during normal apply.
+The pinned engine therefore includes an opt-in removal guard enabled by the
+Flarestack runner. It inspects the exact plan being applied, including nested
+state-backend provisioning, and rejects deletion, orphaning, replacement and
+pending replacement cleanup. Garbage collection has its own fail-closed check.
+The runner checks the patch's support marker before invoking cloud operations;
+an unpatched dependency cannot silently bypass this requirement.
+
+The normal deploy command has no override. Only the separate destroy operation,
+after exact stage confirmation, omits the guard. This is an intentionally scoped
+addition to the existing pinned Alchemy patch, not a second provisioning engine
+or a parse of terminal plan output. It must be removed only when equivalent
+upstream protection is available and verified. Deployments to a stage must run
+serially; this preview does not add a distributed deployment lock.

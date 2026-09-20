@@ -1,8 +1,51 @@
 diff --git a/src/Apply.ts b/src/Apply.ts
-index 4e056c4e52c2a6f9b4d8ed08bb35d900171c4d07..0cf750712f2ebe6f38a44cac477bb267cbc2cb67 100644
+index 4e056c4e52c2a6f9b4d8ed08bb35d900171c4d07..599cc0fce8717c637905e64346d310cd3f5670c3 100644
 --- a/src/Apply.ts
 +++ b/src/Apply.ts
-@@ -747,13 +747,14 @@ const executeNode = (
+@@ -72,6 +72,25 @@ import {
+ import { type ResourceOp, recordResourceOp } from "./Telemetry/Metrics.ts";
+ import { hashInput } from "./Util/sha256.ts";
+ 
++/** Flarestack pinned safety patch: every nested apply obeys the runner policy. */
++export const flarestackNonDestructiveApplyVersion = 1;
++const nonDestructiveApply = () =>
++  typeof process !== "undefined" && process.env.FLARESTACK_NON_DESTRUCTIVE_APPLY === "1";
++const destructiveApplyError = () => new Error(
++  "Deployment blocked: resource removal, replacement, or pending replacement cleanup requires explicit destructive authorization.",
++);
++export function assertNonDestructiveApply(plan: Plan): void {
++  if (plan.destroy || Object.values(plan.deletions).some(Boolean)) throw destructiveApplyError();
++  for (const node of Object.values(plan.resources)) {
++    if (node.action === "replace") throw destructiveApplyError();
++    let state: ResourceState | undefined = node.state;
++    while (state) {
++      if (["replacing", "replaced", "deleting"].includes(state.status)) throw destructiveApplyError();
++      state = "old" in state ? state.old : undefined;
++    }
++  }
++}
++
+ export type AppliedPlan<P extends Plan> = {
+   [id in keyof P["resources"]]: P["resources"][id] extends
+     | Delete
+@@ -161,6 +180,16 @@ export const apply = <P extends Plan>(
+   State | Stack | Stage
+ > =>
+   Effect.gen(function* () {
++    if (nonDestructiveApply()) {
++      yield* Effect.sync(() => assertNonDestructiveApply(plan));
++      const state = yield* yield* State;
++      const stack = yield* Stack;
++      const stage = yield* Stage;
++      if ((yield* state.getReplacedResources({ stack: stack.name, stage })).length > 0) {
++        return yield* Effect.die(destructiveApplyError());
++      }
++    }
++
+     // Credential-free dev: a dev-mode plan that needs the real cloud
+     // (`Alchemy.remote()` rows, remote-proxied bindings, deletions of rows
+     // stamped `providerMode: "live"`) demands cloud credentials exactly
+@@ -747,13 +776,14 @@ const executeNode = (
            `removal policy ${node.state.removalPolicy} → ${node.resource.RemovalPolicy}`,
          );
        }
@@ -18,6 +61,18 @@ index 4e056c4e52c2a6f9b4d8ed08bb35d900171c4d07..0cf750712f2ebe6f38a44cac477bb267
        return;
      }
  
+@@ -2375,6 +2405,11 @@ const collectGarbage = Effect.fn(function* (
+       // It stays behind for the next destroy; the aggregate error below
+       // reports it.
+       .filter((replaced) => !unresolved.has(replaced.fqn));
++    // Recheck at the deletion boundary: a concurrent writer must never turn
++    // a previously safe plan into generation cleanup.
++    if (nonDestructiveApply() && remainingReplacedResources.length > 0) {
++      return yield* Effect.die(destructiveApplyError());
++    }
+     if (!first && remainingReplacedResources.length === 0) {
+       break;
+     }
 diff --git a/src/Cloudflare/Local.ts b/src/Cloudflare/Local.ts
 index a5f43e8b1fc2fba1f9a9cf8278f3dd00b77df4ed..e8935869465ccde467c08986f342767068472fcf 100644
 --- a/src/Cloudflare/Local.ts

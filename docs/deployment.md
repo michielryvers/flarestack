@@ -49,6 +49,13 @@ Run the same command to update the stage. Add migrations with new, increasing
 filenames; do not edit migrations already applied to a shared environment.
 Alchemy owns both application D1 migrations and Better Auth provisioning.
 
+Normal deployment must not remove managed resources. The pinned apply guard
+rejects planned deletion, orphaning and replacement, including pending cleanup of
+old resource generations, before applying a destructive plan. This also covers
+Alchemy's state-backend provisioning. Restore an accidentally removed declaration
+and retry; destructive stage teardown remains a separate confirmed operation.
+There is no deploy-time force override. Run deployments to a stage serially.
+
 ## Domains, email and secrets
 
 A stage may set `domain` to a custom hostname on your Cloudflare account. Omit it

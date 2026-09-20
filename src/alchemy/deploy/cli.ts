@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { deploymentEnvironment, deploymentOrigin, DeploymentError, loadDeployment } from "./config.ts";
-import { assertDestroyConfirmation, parseArguments, stageBuild } from "./safety.ts";
+import { assertDeploymentSafetySupport, assertDestroyConfirmation, parseArguments, stageBuild } from "./safety.ts";
 import { deploymentLogs } from "./telemetry.ts";
 import { resolveCloudAccount } from "./account.ts";
 import { smokeDeployment } from "./smoke.ts";
@@ -41,6 +41,8 @@ export async function runDeployment(args: string[]) {
     const packagePath = fileURLToPath(new URL("../package.json", pathToFileURL(entry)));
     const alchemyPackage = JSON.parse(await readFile(packagePath, "utf8"));
     if (alchemyPackage.version !== "2.0.0-beta.79") throw new DeploymentError("This Flarestack release requires Alchemy 2.0.0-beta.79.");
+    const engine = await import(Bun.resolveSync("alchemy/Apply", deployment.local.infra));
+    assertDeploymentSafetySupport(engine.flarestackNonDestructiveApplyVersion);
     const cli = fileURLToPath(new URL("../bin/cli.js", pathToFileURL(entry)));
     const childEnvironment: Record<string, string | undefined> = { ...process.env };
     // A deployment never inherits the local supervisor's bridge/relay credentials or local endpoints.
@@ -77,11 +79,12 @@ export async function runDeployment(args: string[]) {
     logger.emit(`Cloudflare authentication verified. Target ${deployment.identity}: ${origin}`);
     if (!deployment.settings.email) logger.emit("Email is disabled for this environment: verification and password recovery are unavailable. Smoke checks do not certify those flows.");
     logger.emit("One container instance; ephemeral ASP.NET data-protection keys can require fresh sign-in after replacement. D1 users and application data persist.");
-    if (parsed.action === "plan") logger.emit("Alchemy plan uses --dry-run for app resources, but its shared state backend may bootstrap or upgrade cloud infrastructure.");
+    if (parsed.action === "plan") logger.emit("Alchemy plan uses --dry-run for app resources; shared state bootstrap is subject to the same removal and replacement guard.");
     if (parsed.action !== "destroy") {
       await stageBuild(deployment.local.root, deployment.context, deployment.local.buildSources, deployment.local.dockerfile);
     }
     Object.assign(childEnvironment, {
+      FLARESTACK_NON_DESTRUCTIVE_APPLY: parsed.action === "destroy" ? undefined : "1",
       ALCHEMY_TELEMETRY_DISABLED: "1", NO_COLOR: "1", FLARESTACK_DEPLOY: "1", FLARESTACK_LOCAL_MODE: "Container",
       FLARESTACK_DEPLOY_ENVIRONMENT: environment, FLARESTACK_CLOUD_BUILD_CONTEXT: deployment.context,
       PUBLIC_ORIGIN: origin, CLOUDFLARE_WORKERS_SUBDOMAIN: account.subdomain,

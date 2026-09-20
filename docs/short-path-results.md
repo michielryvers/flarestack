@@ -9,7 +9,10 @@ This records executed checks, not a declaration of production readiness.
   Alchemy entrypoint serves local and cloud infrastructure; Aspire delegates its
   explicit deployment step to the packaged runner.
 - Stable app/stage identities and encrypted Alchemy state retain the Better Auth
-  secret. Teardown is separate and requires the exact stage identity.
+  secret. Teardown is separate and requires the exact stage identity. A scoped
+  pinned-engine guard also blocks implicit removals, replacements and pending
+  generation cleanup during both app and backend apply; missing support fails
+  before cloud operations. Real Plan/Apply fixtures verify this boundary.
 - Canonical Aspire and .NET registration APIs remove pre-builder global mutation,
   empty callbacks and routine implementation namespaces; compatibility facades
   retain prior public methods.
@@ -39,7 +42,7 @@ dotnet test Flarestack.slnx --no-restore
 bun run test:template
 ```
 
-Results: 177 .NET tests, 162 Bun tests and two template-generation tests passed.
+Results: 177 .NET tests, 170 Bun tests and two template-generation tests passed.
 Type checking, version alignment, package creation and generated .NET/TypeScript
 builds passed. No test was disabled to obtain these results.
 
@@ -176,7 +179,8 @@ No remote state was deleted.
 | Template artifact | SHA-256 |
 | --- | --- |
 | Earlier cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
-| Final cloud runtime validation | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
+| Locked cloud runtime validation | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
+| Final guarded template | `bd04f71fb2387e14c16c22548423b316ac90316ecf67fc04a9b9e1d4453fbbd8` |
 
 The final template changes browser-test helpers, their documented Node.js
 prerequisite, package repository metadata, and lockfile generation relative to the
@@ -190,19 +194,31 @@ TypeScript checking, restore/build and same-stage Aspire deployment at
 22:17:39 UTC. HTTPS OIDC, health/readiness and private-boundary checks passed;
 email configuration, bootstrap identity, migrations and original acceptance
 evidence were preserved. The final deployment logs passed both a known-credential
-check and Gitleaks. No additional signup or email was requested. The latest local template adds only a sign-in test helper; its digest is
+check and Gitleaks. No additional signup or email was requested. The subsequent local template added a sign-in test helper; its digest was
 `a1c20511e2e1b0a552585a01a1b39bfb00b145deb5147188eb9f9f6b4124b365`.
 It submits once, reports allowlisted route/status timing, and fails promptly on a
 classified error. The bounded successful-login wait is 15 seconds; unrelated
 assertions retain their existing limits. Two real-browser contract tests cover a
 delayed success and immediate failure without retries or credential output.
 Both template cases passed with 832 assertions, and the complete Bun suite passed
-162 tests with 726 assertions. The final helper passed all three live Playwright Node cases in 72.7 seconds:
+170 tests with 755 assertions. The final helper passed all three live Playwright Node cases in 72.7 seconds:
 account lifecycle, password/session controls and Todo/OIDC/WASM ownership.
 Successful sign-in chains took 0.3–0.4 seconds locally. Full Aspire telemetry
 verification passed afterward, including all five log services and connected
 Worker/.NET/D1/auth/email/WASM spans. The running dashboard contains trace
 `a44c1cc5ca9fbe4741165432553a7360`.
+
+The final guarded template was then built in an isolated staging root and
+redeployed to the same cloud stage at **22:58:06 UTC**. The installed engine
+reported guard support version 1; eight real Plan/Apply safety fixtures passed
+with 29 assertions. Frozen install, TypeScript checking, .NET restore/build,
+`aspire deploy --environment staging`, and HTTPS OIDC/health/private-route checks
+passed. The template's npm runtime is
+`flarestack-alchemy-0.1.0-local.2-beaea9113f3cc452.tgz`; the four NuGet archives
+are unchanged. Email/admin settings, infrastructure, migrations and original
+browser acceptance evidence were preserved. Recursive template and sanitized-log
+scans found no secrets. No live destructive negative test was attempted; those
+cases use controlled providers. No additional email or stage was created.
 
 Four isolated library packages also produced matching portable-PDB symbol
 archives. The SDK-based release verifier checked assembly/PDB identities and

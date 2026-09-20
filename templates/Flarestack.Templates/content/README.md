@@ -45,7 +45,8 @@ aspire deploy --environment staging
 Review `deployment.json` first. An empty staging configuration uses workers.dev
 and disables cloud email. Add a custom `domain` and `email` sender there when
 needed. Cloud resources are billable. Stage names are explicit and lowercase;
-repeating the command updates the same stage.
+repeating the command updates the same stage. Normal deploy rejects resource
+removal/replacement plans; destructive teardown requires a separate confirmation.
 
 Production is preview-only: ASP.NET Data Protection keys do not survive container
 replacement, so users may need to sign in again. Production settings must explicitly
