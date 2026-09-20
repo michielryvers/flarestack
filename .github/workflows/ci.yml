@@ -56,7 +56,7 @@ jobs:
       - name: Type check
         run: bun run check
       - name: TypeScript contracts
-        run: bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/acceptance-diagnostics.test.ts ./scripts/package-process.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/e2e-process.test.ts
+        run: bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/acceptance-diagnostics.test.ts ./scripts/package-process.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/e2e-process.test.ts ./scripts/sign-in.test.ts
       - name: .NET contracts
         run: dotnet test Flarestack.slnx --no-restore
       - name: Template generation contracts

@@ -60,6 +60,8 @@ jobs:
         run: cp LICENSE src/alchemy/LICENSE
       - name: Build the candidate package set
         run: bun run prepare:local
+      - name: Verify portable symbols and Source Link
+        run: dotnet run scripts/verify-symbols.cs -- artifacts/nuget "$VERSION" "$GITHUB_SHA"
       - name: Check release policy tests
         run: bun test ./scripts/release-policy.test.ts
       # This intentionally fails for today's archive-backed, patched local template.
@@ -69,7 +71,7 @@ jobs:
         run: bun scripts/check-release.ts --registry
       - name: Record exact package bytes
         working-directory: artifacts
-        run: sha256sum nuget/*.nupkg "npm/flarestack-alchemy-${VERSION}.tgz" templates/*.nupkg > SHA256SUMS
+        run: sha256sum nuget/*.nupkg nuget/*.snupkg "npm/flarestack-alchemy-${VERSION}.tgz" templates/*.nupkg > SHA256SUMS
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: release-${{ needs.identity.outputs.version }}
@@ -77,6 +79,7 @@ jobs:
           retention-days: 30
           path: |
             artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
             artifacts/npm/flarestack-alchemy-${{ needs.identity.outputs.version }}.tgz
             artifacts/templates/*.nupkg
             artifacts/SHA256SUMS
@@ -125,7 +128,9 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           test -n "$NUGET_API_KEY"
+          # NuGet also pushes each adjacent .snupkg; do not use --no-symbols.
           for package in packages/nuget/*.nupkg; do
+            test -f "${package%.nupkg}.snupkg"
             dotnet nuget push "$package" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
           done
           dotnet nuget push "packages/templates/Flarestack.Templates.${VERSION}.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"

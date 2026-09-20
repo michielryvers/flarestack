@@ -77,6 +77,25 @@ provider fixes before removing the patches. Then add and validate registry-based
 including fresh restore, restart and migration acceptance. Do not publish a partial
 package set as a supported starter experience merely to bypass these constraints.
 
+## Symbols and Source Link
+
+Each framework NuGet pack also produces a separate `.snupkg` containing its
+portable PDB. The SDK embeds Source Link mappings without an additional runtime
+or build package dependency. The template itself has no assembly and needs no
+symbol package; preview templates continue to embed the same five runtime
+archives, without embedding symbols.
+
+The release workflow runs `scripts/verify-symbols.cs` against all four exact
+package IDs and the tagged commit. It checks PDB/assembly identity, repository
+Source Link mappings, and D1's shared protocol source. Checksums and uploaded
+release artifacts include the four symbol packages. Publishing each `.nupkg`
+with its adjacent `.snupkg` also sends the symbols to NuGet's symbol server;
+the workflow deliberately does not use `--no-symbols`. Downloads are verified
+against the recorded checksums before publication.
+
+This is a verified packaging foundation, not evidence of a registry publication
+or a remote debugger session. Local preview template consumers are unchanged.
+
 ## Publication environment
 
 Before enabling publication, repository administrators must configure the GitHub

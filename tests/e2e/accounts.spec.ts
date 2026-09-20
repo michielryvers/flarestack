@@ -1,3 +1,4 @@
+import { submitSignIn } from "./sign-in.ts";
 import { runAspire } from "./aspire.ts";
 import {inboxUrl, origin} from "./local.ts";
 import {test, expect} from "@playwright/test";
@@ -31,8 +32,7 @@ test("verification, password recovery, profile and session revocation", async ({
   await page.getByRole("button",{name:"Continue"}).click();
   await expect(page.locator("#auth-error")).not.toBeEmpty();
   await page.getByLabel("Password",{exact:true}).fill(password+"New");
-  await page.getByRole("button",{name:"Continue"}).click();
-  await expect.poll(()=>new URL(page.url()).pathname).toBe("/todos");
+  await submitSignIn(page);
   // Reset links are single-use.
   await other.goto(link);
   await other.getByLabel("New password",{exact:true}).fill(password+"Again");
@@ -57,8 +57,7 @@ test("password changes and self-service session controls", async ({browser}) => 
       await other.goto("/todos");
       await other.getByLabel("Email",{exact:true}).fill(email);
       await other.getByLabel("Password",{exact:true}).fill(value);
-      await other.getByRole("button",{name:"Continue"}).click();
-      await expect.poll(()=>new URL(other.url()).pathname).toBe("/todos");
+      await submitSignIn(other);
     };
     await loginOther(password);
     await page.goto("/account/security");

@@ -12,6 +12,8 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <IsPackable>true</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <ItemGroup><None Include="$(MSBuildThisFileDirectory)PACKAGE_README.md" Pack="true" PackagePath="README.md" /></ItemGroup>
   <ItemGroup><None Include="$(MSBuildThisFileDirectory)../LICENSE" Pack="true" PackagePath="LICENSE" /></ItemGroup>

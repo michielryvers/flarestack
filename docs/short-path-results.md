@@ -39,7 +39,7 @@ dotnet test Flarestack.slnx --no-restore
 bun run test:template
 ```
 
-Results: 177 .NET tests, 160 Bun tests and two template-generation tests passed.
+Results: 177 .NET tests, 162 Bun tests and two template-generation tests passed.
 Type checking, version alignment, package creation and generated .NET/TypeScript
 builds passed. No test was disabled to obtain these results.
 
@@ -122,7 +122,7 @@ reporting prevents attributing the wake to that request. Sleep/restart and healt
 recovery were observed; isolated first-request cold-start latency remains
 unverified. Cloud trace export and fault injection were not tested.
 
-The final refreshed archive (digest recorded below) was redeployed to the same
+An earlier refreshed archive (digest recorded below) was redeployed to the same
 stage at 21:38:09 UTC. Frozen dependency installation, TypeScript checking, forced
 NuGet restore and a clean generated-app build passed first. The redeploy passed
 HTTPS OIDC discovery, health/readiness, and rejection of private auth/D1 routes.
@@ -175,8 +175,8 @@ No remote state was deleted.
 
 | Template artifact | SHA-256 |
 | --- | --- |
-| Final cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
-| Final local template | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
+| Earlier cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
+| Final cloud runtime validation | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
 
 The final template changes browser-test helpers, their documented Node.js
 prerequisite, package repository metadata, and lockfile generation relative to the
@@ -185,9 +185,26 @@ repeat staging is byte-identical, and a clean external frozen install/typecheck
 passed without changing that lock. The generated workspace name matches the app.
 All five embedded runtime packages and application/infrastructure sources are
 byte-identical, but one nested logging dependency changes to the root-reviewed
-OpenTelemetry API 1.9.1. A same-stage refresh of this exact final archive is being
-validated separately. Both template cases passed with 830 assertions; three live
-Playwright Node cases and full Aspire telemetry verification passed locally.
+OpenTelemetry API 1.9.1. This exact final archive completed frozen installation,
+TypeScript checking, restore/build and same-stage Aspire deployment at
+22:17:39 UTC. HTTPS OIDC, health/readiness and private-boundary checks passed;
+email configuration, bootstrap identity, migrations and original acceptance
+evidence were preserved. The final deployment logs passed both a known-credential
+check and Gitleaks. No additional signup or email was requested. The latest local template adds only a sign-in test helper; its digest is
+`e131462f58af42595c2effdc3a1fd2617e8da9c14eea2caadbc63c803ef23af8`.
+It submits once, reports allowlisted route/status timing, and fails promptly on a
+classified error. The bounded successful-login wait is 15 seconds; unrelated
+assertions retain their existing limits. Two real-browser contract tests cover a
+delayed success and immediate failure without retries or credential output.
+Both template cases passed with 832 assertions, and the complete Bun suite passed
+162 tests with 726 assertions. Three live Playwright Node cases and full Aspire
+telemetry verification passed before this test-only helper change.
+
+Four isolated library packages also produced matching portable-PDB symbol
+archives. The SDK-based release verifier checked assembly/PDB identities and
+Source Link URLs for the exact repository commit, including shared protocol
+source. Missing-symbol and wrong-commit negative checks passed. Registry symbol
+publication and a debugger download session have not been exercised.
 
 The original Todo app is restored in Fast mode, with saved administrator
 configuration, HTTP 200 health, readiness and OIDC responses, logs from all required

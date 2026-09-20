@@ -10,10 +10,10 @@ Read [AGENTS.md](AGENTS.md) for process ownership and telemetry requirements.
 bun install --frozen-lockfile
 bun run prepare:local
 bun run check
-bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts
+bunx playwright install chromium
+bun run test
 bun run test:template
 dotnet test Flarestack.slnx
-bunx playwright install chromium
 aspire run
 ```
 
