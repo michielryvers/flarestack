@@ -32,7 +32,7 @@ export async function submitSignIn(page: Page): Promise<void> {
   };
   let checkpoint: ReturnType<typeof setTimeout> | undefined;
   try {
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.locator('#sign-in-form button[type="submit"]').click();
     checkpoint = setTimeout(() => { void report("pending-after-5s"); }, 5000);
     const outcome = await page.waitForFunction(() => {
       if (location.pathname === "/todos") return { success: true, error: "" };

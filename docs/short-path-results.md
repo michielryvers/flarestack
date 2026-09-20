@@ -191,14 +191,18 @@ TypeScript checking, restore/build and same-stage Aspire deployment at
 email configuration, bootstrap identity, migrations and original acceptance
 evidence were preserved. The final deployment logs passed both a known-credential
 check and Gitleaks. No additional signup or email was requested. The latest local template adds only a sign-in test helper; its digest is
-`e131462f58af42595c2effdc3a1fd2617e8da9c14eea2caadbc63c803ef23af8`.
+`a1c20511e2e1b0a552585a01a1b39bfb00b145deb5147188eb9f9f6b4124b365`.
 It submits once, reports allowlisted route/status timing, and fails promptly on a
 classified error. The bounded successful-login wait is 15 seconds; unrelated
 assertions retain their existing limits. Two real-browser contract tests cover a
 delayed success and immediate failure without retries or credential output.
 Both template cases passed with 832 assertions, and the complete Bun suite passed
-162 tests with 726 assertions. Three live Playwright Node cases and full Aspire
-telemetry verification passed before this test-only helper change.
+162 tests with 726 assertions. The final helper passed all three live Playwright Node cases in 72.7 seconds:
+account lifecycle, password/session controls and Todo/OIDC/WASM ownership.
+Successful sign-in chains took 0.3–0.4 seconds locally. Full Aspire telemetry
+verification passed afterward, including all five log services and connected
+Worker/.NET/D1/auth/email/WASM spans. The running dashboard contains trace
+`a44c1cc5ca9fbe4741165432553a7360`.
 
 Four isolated library packages also produced matching portable-PDB symbol
 archives. The SDK-based release verifier checked assembly/PDB identities and

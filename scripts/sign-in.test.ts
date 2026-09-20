@@ -27,7 +27,7 @@ test("real browser sign-in submits once, follows completion, and fails immediate
       } else if (url.pathname === "/todos") {
         await route.fulfill({ contentType: "text/html", body: "<h1>Workspace</h1>" });
       } else {
-        await route.fulfill({ contentType: "text/html", body: `<form id="sign-in-form"><button type="submit">Continue</button><p id="auth-error"></p></form><script>
+        await route.fulfill({ contentType: "text/html", body: `<form id="sign-in-form"><button type="submit">Continue <span>→</span></button><p id="auth-error"></p></form><script>
           document.querySelector('form').onsubmit=async event=>{event.preventDefault();const response=await fetch('/auth/sign-in/email?state=secret-query',{method:'POST'});if(response.ok)location.assign('/todos');else document.querySelector('#auth-error').textContent='secret@example.test private-token';};
         </script>` });
       }
