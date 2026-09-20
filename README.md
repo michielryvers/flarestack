@@ -80,7 +80,8 @@ flowchart LR
 The default is one container. ASP.NET Data Protection keys are currently ephemeral;
 replacement can require a fresh sign-in. Production deployment requires explicitly
 acknowledging that limitation. Multi-instance Blazor and general social-provider
-coverage remain deferred. Windows coverage is configured, not yet claimed as passed.
+coverage remain deferred. Linux Fast/Container and Windows Fast acceptance passed;
+macOS and Windows Container mode remain unverified.
 
 ## Learn more
 

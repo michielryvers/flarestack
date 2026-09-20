@@ -157,15 +157,27 @@ cases, migration/restart and connected traces. Their connected D1 trace IDs were
 `5b29cc5593adb2e85576a65a347c48cb` (Container). A prior local Bun install stalled;
 an isolated retry recovered it, and the final fresh Fast run completed unaided.
 
-Windows now completes packaging and process-tree cleanup. Its hosted run found a
-test expectation using an 8.3 temporary-path alias rather than the canonical path;
-that assertion was corrected. The next run started a healthy generated app but
-three browser cases could not launch Aspire through Node on Windows. A shared
-no-shell resolver reads the pinned SDK’s Windows `.cmd` launcher as metadata and
-passes its package executable directly. Tests cover the supported launcher shape,
-case-insensitive PATH keys and literal arguments. An early CI probe uses real Node
-to catch executable-resolution failures before packaging. Full Windows acceptance is
-being rerun. macOS and Windows Container mode remain unverified.
+Final hosted [CI run 35543723178](https://github.com/michielryvers/flarestack/actions/runs/35543723178)
+passed **Linux Fast, Linux Container and Windows Fast** on implementation commit
+`90b1e4e`. Later documentation-only commits record these results; they do not
+change the verified implementation. Windows passed the native Node/Aspire probe,
+package creation, Bun/.NET/template contracts and the complete generated-app
+browser/restart/migration/telemetry journey.
+Windows completed at 23:30:25 UTC: four browser cases before migration and three
+afterward, with both telemetry rounds passing. All 16 measured sign-ins succeeded
+in 0.541–8.170 seconds. The slowest returned login HTTP 200 at 0.198 seconds,
+callback 302 at 3.511 seconds and `/todos` HTTP 200 at 7.991 seconds. This confirms
+that a valid cold flow can exceed the former five-second assertion without an
+authentication failure.
+
+Windows validation exposed and corrected two portability/test issues: the pinned
+SDK installs Aspire behind a `.cmd` launcher, and Blazor's reconnect auto-reload
+could compete with the persistence test's own navigation. The no-shell resolver
+runs the verified package executable directly; the restart test retains browser
+contexts/cookies but removes obsolete circuits first. A bounded single-submit
+login helper records only safe route/status timing and fails on classified auth
+errors. No browser test was skipped and no authentication retry was introduced.
+macOS and Windows Container mode remain unverified.
 
 The original local Todo installation was also migrated: eight legacy development
 state records were imported through read-only remote requests into private local

@@ -7,13 +7,15 @@ Published entries are immutable; corrections receive a dated note.
 
 - Add generated-project deployment through `aspire deploy --environment staging`.
 - Keep deployment identities and Better Auth secrets stable across updates; require
-  separate explicit stage confirmation for destruction.
+  separate explicit stage confirmation for destruction. Block implicit removals,
+  replacements and generation cleanup during application and backend deployment.
 - Add canonical root .NET registrations and a single Aspire setup method while
   retaining compatibility overloads.
 - Add focused infrastructure extensions, portable local commands and isolated
   per-application local state/Worker registries.
 - Add packed-template Fast/Container and opt-in cloud acceptance, Linux/Windows CI,
-  package metadata, MIT licensing and gated publication workflows.
+  package metadata, matching Source Link symbol packages, MIT licensing and gated
+  publication workflows.
 - Gate production on explicit acknowledgement of ephemeral Data Protection keys;
   retain the one-container limit.
 

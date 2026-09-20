@@ -16,7 +16,7 @@ recorded separately from the broader local suite.
 | Auth failure / protocol mismatch | Unit + private-handler tests | Same transport contracts | Fault injection not run |
 | Razor hot reload | Previously tested | Restart required | Not applicable |
 | Packed clean install / restart | Passed on Linux | Passed on Linux | Fresh external generated project deployed |
-| Windows hosted CI | In progress | Not run | Not applicable |
+| Windows hosted CI | Packed build/browser/restart/migration/telemetry passed | Not run | Not applicable |
 | Container sleep/wake / replacement | Startup/restart tested | Startup/restart tested | Inactive → restarted and healthy observed; isolated wake trigger/timing unverified |
 
 The automated cloud journey used synthetic accounts with email disabled. Email
@@ -36,8 +36,9 @@ blocks. Both passed administration, recovery, Todo isolation, migration/data
 retention and Aspire log/trace checks. Their Alchemy registries are app-local.
 
 The [short-path acceptance record](short-path-results.md) distinguishes actual
-local/cloud passes from hosted CI gaps. Hosted Linux Fast and Container acceptance passed; Windows remains in progress.
-Merely defining its workflow is not evidence of Windows compatibility. Earlier preview-upgrade and hot-reload
+local/cloud passes from remaining gaps. [Hosted CI run 35543723178](https://github.com/michielryvers/flarestack/actions/runs/35543723178) passed
+Linux Fast, Linux Container and Windows Fast on implementation commit `90b1e4e`.
+Subsequent documentation-only changes record those results. Earlier preview-upgrade and hot-reload
 results remain historical evidence; they were not repeated for this change.
 
 Build/unit/template/acceptance commands below run in the framework repository.

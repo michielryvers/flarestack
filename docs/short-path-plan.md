@@ -70,11 +70,12 @@ Use explicit Bun test paths: bare filters can discover ignored audit snapshots.
 ## Outstanding evidence
 
 - [x] New generated project: local Fast and Container acceptance.
-- [ ] Linux and Windows generated-project CI results.
+- [x] Linux Fast/Container and Windows Fast generated-project CI results.
 - [x] Fresh generated project: `aspire deploy --environment staging`.
 - [x] Live health/auth/Todo/ownership/session checks, with email coverage stated.
 - [x] Redeploy and migration preserve data and stable resources.
-- [ ] Captured diagnostics and separately confirmed test-stage teardown.
+- [x] Capture cloud diagnostics before any teardown.
+- [ ] Separately confirmed test-stage teardown; awaiting the owner's decision.
 - [x] Secret scans of source, generated artifacts, and deployment transcript.
 - [x] Release artifacts and publication/credential limitations documented.
 
