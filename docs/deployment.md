@@ -4,9 +4,11 @@ The deployment pipeline targets .NET 10.0.401, Aspire 13.5.3, Bun 1.4.2 and
 Alchemy 2.0.0-beta.79. Aspire's custom pipeline API is experimental and isolated
 in the hosting package. See the [deployment decision](adr/deployment-pipeline.md).
 
-The generated-project flow is being validated in this change. A prior Todo cloud
-preview exercised live verification email and was subsequently destroyed; that
-record is not proof of the new generated-project pipeline.
+A fresh, packaged generated application passed this flow on 20 September 2026,
+including browser authentication, ownership isolation, administration, migration
+and repeated deployment. Email was disabled for that automated stage; an earlier
+Todo preview separately verified delivery. See the [acceptance record](short-path-results.md)
+for commands, evidence and remaining limitations.
 
 ## Configure and deploy
 
@@ -15,7 +17,7 @@ Alchemy with Cloudflare from the application's infrastructure directory:
 
 ```sh
 cd infra
-bunx alchemy profile edit
+bunx alchemy profile edit --add cloudflare
 cd ..
 aspire deploy --environment staging
 ```

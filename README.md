@@ -9,14 +9,16 @@ local email inbox. Alchemy owns Cloudflare provisioning and migrations.
 
 The supported installation currently uses local-packed artifacts; NuGet/npm
 registry packages are not published. A prior Todo cloud preview verified live
-email and was removed. The generated-project deployment pipeline is under
-acceptance validation; see [validation](docs/validation.md) for actual evidence.
+email and was removed. A freshly generated app has passed deployment, browser
+CRUD/isolation, administration, migration and redeployment through Aspire. See
+[validation](docs/validation.md) for the exact coverage and platform gaps.
 Do not treat this preview as production-ready.
 
 ## Create and run
 
 Prerequisites: .NET SDK **10.0.401**, Bun **1.4.2**, and Aspire CLI **13.5.3**.
-Docker is required for Container mode and deployment. Install Aspire with
+Docker is required for Container mode and deployment; local runs need no Cloudflare
+login. Install Aspire with
 `dotnet tool install --global Aspire.Cli --version 13.5.3`.
 
 Once you have the packed template (see [contributing](CONTRIBUTING.md)):

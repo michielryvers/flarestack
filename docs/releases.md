@@ -23,6 +23,14 @@ release tags against updates/deletion; never rebuild and overwrite a published
 version. Local preview cache replacement in `prepare:local` is not a registry
 release policy.
 
+## Release notes
+
+Before tagging, move the completed entries in [CHANGELOG.md](../CHANGELOG.md)
+from Unreleased into a dated version heading. Include public API migration links,
+security/compatibility changes, executed acceptance results and known limitations.
+Use that entry as the GitHub release body and retain an empty Unreleased heading.
+Do not describe a configured CI job or an unrun cloud test as validated.
+
 ## Candidate workflow
 
 The **Release candidate** workflow runs for version tags or manual dispatch on a
@@ -44,8 +52,8 @@ coordinated npm version and HTTPS NuGet feeds. Runtime validation separately
 rejects a private package and remaining repository patch requirements. Removing
 only a template patch declaration cannot bypass the repository gate.
 
-Resolve the upstream readiness-order and SQLite-startup fixes before removing the
-patches. Then add and validate registry-based staging with no bundled archives,
+Resolve the upstream readiness-order, SQLite-startup and credential-free local
+provider fixes before removing the patches. Then add and validate registry-based staging with no bundled archives,
 including fresh restore, restart and migration acceptance. Do not publish a partial
 package set as a supported starter experience merely to bypass these constraints.
 

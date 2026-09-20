@@ -37,3 +37,20 @@ for source compatibility. `ID1Database`, `ICurrentUser`, `IUserAdministration`,
 Deployment now requires an explicit lowercase stage and project-owned
 `deployment.json`. The old repository-only preview script delegates to the same
 packaged runner; a historical preview hostname is no longer a deployment default.
+
+## Local state and credentials
+
+Local development uses app-owned Alchemy state and Worker registry directories;
+it no longer requires or reads a Cloudflare login. The pinned provider patch gives
+local binding/D1 materialization an inert account namespace and rejects actual
+Cloudflare API credentials in development. Remote resources are unsupported in
+this local flow; use an authenticated deployment for them. Cloud deployments keep
+the existing encrypted Cloudflare state and authentication path.
+
+Existing local checkouts using the former remote dev-state backend require state
+migration before their first start with this version. D1 filenames derive from
+identifiers in that state: retaining SQLite files alone is insufficient. Do not
+delete state or start a fresh local graph over data you want to retain. The
+migration procedure is under validation; preserve both remote state and the
+application's `.alchemy` directory until it is documented and verified. No remote
+dev state or cloud resources are automatically removed.
