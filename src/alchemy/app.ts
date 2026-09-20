@@ -14,6 +14,8 @@ export interface FlarestackAppOptions {
   workerMain: string;
   container: { context: string; dockerfile: string; environment: Record<string, string> };
   local: { port: number; bridgePort: number };
+  /** Optional canonical HTTPS hostname for a cloud deployment. */
+  domain?: string;
 }
 
 /** Compose the resource graph. The caller owns the D1 migrations and auth entrypoint. */
@@ -24,12 +26,14 @@ export function FlarestackApp(options: FlarestackAppOptions) {
   if (fast && (!process.env.FLARESTACK_LOCAL_BRIDGE_TOKEN || !process.env.FLARESTACK_LOCAL_ORIGIN))
     throw new Error("Fast mode requires an AppHost-managed origin and bridge token");
   const telemetry = {
-    OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318",
-    OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "",
+    OTEL_EXPORTER_OTLP_ENDPOINT: process.env.FLARESTACK_DEPLOY === "1" ? (process.env.FLARESTACK_CLOUD_OTLP_ENDPOINT ?? "") : process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318",
+    OTEL_EXPORTER_OTLP_HEADERS: process.env.FLARESTACK_DEPLOY === "1" ? "" : process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "",
   };
   const DotNetImage = Cloudflare.Container<DotNet>("DotNetImage", {
     context: options.container.context, dockerfile: options.container.dockerfile,
     className: "DotNet", ports: [{ name: "http", port: 8080 }], instanceType: "lite",
+    maxInstances: 1,
+    observability: { logs: { enabled: true } },
   });
   const bindings = { Database: options.database, Auth: options.auth, ...(options.email ? { Email: options.email } : {}), ...telemetry };
   const LocalBridge = fast ? Cloudflare.Worker("LocalBridge", {
@@ -40,6 +44,9 @@ export function FlarestackApp(options: FlarestackAppOptions) {
   }) : undefined;
   const Worker = Cloudflare.Worker("Edge", {
     main: options.workerMain,
+    domain: options.domain,
+    workersDev: options.domain ? false : true,
+    observability: { enabled: true },
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
     dev: { port: options.local.port, strictPort: true },
     env: { ...bindings, ...(fast ? {} : { DotNet: DotNetImage }),

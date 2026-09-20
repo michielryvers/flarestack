@@ -2,7 +2,7 @@
 
 Flarestack is a local-first framework and starter for a **.NET 10 Blazor Web App
 using Interactive Server rendering**, backed by Cloudflare Workers, D1 and Better
-Auth. It is a local preview; cloud validation is still pending.
+Auth. It is a preview with local validation and an initial Cloudflare deployment.
 
 ```mermaid
 flowchart TD
@@ -92,7 +92,8 @@ predicates. See the precise [session/failure model](security-model.md) and
 ## 6. Validation and limits
 
 See the [validation matrix](validation.md) for measured coverage and commands.
-Local email is capture-only; delivery, cloud deploy/redeploy, custom domains and
-cold starts remain unvalidated. Metrics, fuzzy admin search and durable audit
+Local email is capture-only; initial cloud deployment, custom-domain login and
+verification delivery now pass. Full cloud CRUD, recovery and sleep/wake validation
+remain pending. Metrics, fuzzy admin search and durable audit
 storage are deferred. See [upgrade guidance](upgrading.md) and the
 [cloud validation runbook](cloud-preview.md).

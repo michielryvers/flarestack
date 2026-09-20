@@ -123,8 +123,9 @@ local ports and state. Raw Alchemy bypasses telemetry collection.
 
 Local Aspire orchestration, fast mode and container fidelity mode are implemented.
 The hosting package uses Aspire executable resources, with endpoints, health checks, dependencies and standard resource
-commands. Further production authentication hardening,
-cloud secrets/state verification, and deployment integration remain future work.
+commands. An initial Cloudflare preview now deploys through Alchemy with a custom
+HTTPS domain, real verification email and a container-backed OIDC/WebSocket flow.
+See the [deployment record and remaining checks](docs/cloud-preview.md).
 
 ## Framework and sample boundary
 
@@ -234,6 +235,7 @@ first-admin setup, auth extension hooks and live Blazor session revalidation.
 `bun run doctor` checks prerequisites. With the AppHost stopped,
 `bun run configure:local --port 9000` assigns a block of eight ports and derives
 the auth origin automatically. See [configuration and upgrades](docs/upgrading.md).
-Live email sending and cloud deployment have not been exercised.
+Initial cloud deployment/redeployment and live verification email now pass;
+the full cloud validation suite remains in progress.
 
 Start with the [developer overview](docs/developer-overview.md), [public APIs](docs/public-api.md), and [security model](docs/security-model.md).

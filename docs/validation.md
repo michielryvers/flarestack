@@ -1,14 +1,14 @@
 # Validation matrix
 
 Local checks are repeatable against packed artifacts. Cloud results are deliberately
-left unclaimed until the disposable-stage run.
+recorded separately from the broader local suite.
 
 | Capability | Fast local | Container local | Cloudflare |
 | --- | --- | --- | --- |
-| OIDC signup/login/logout | Browser tested | Browser tested | Not tested |
-| D1 migrations and persistence | Tested | Tested | Not tested |
-| Blazor WebSockets / owned CRUD | Browser tested | Browser tested | Not tested |
-| Email | Capture tested | Capture tested | Delivery not tested |
+| OIDC signup/login/logout | Browser tested | Browser tested | Verified signup/login/callback tested; logout pending |
+| D1 migrations and persistence | Tested | Tested | Initial migration and account persistence after redeploy tested |
+| Blazor WebSockets / owned CRUD | Browser tested | Browser tested | WebSocket handshake and owned read tested; browser CRUD pending |
+| Email | Capture tested | Capture tested | Verification delivery confirmed by recipient |
 | Password recovery / session controls | Browser tested | Browser tested | Not tested |
 | Admin disable / live circuit revocation | Opt-in browser test | Same opt-in test available | Not tested |
 | Auth failure / protocol mismatch | Unit tests + private-handler tests | Same transport contract | Not tested |
@@ -21,8 +21,9 @@ Preview `0.1.0-local.2` uses protocol 2. Verification includes 24 .NET tests,
 60 Bun tests (137 assertions), TypeScript checks, and packed-template checks.
 Fast acceptance exercised the previous `0.1.0-local.1` archive as well as a
 clean installation. Both modes verify connected Worker/.NET/D1/auth/email traces
-and local logs in Aspire. Actual Cloudflare deployment, delivery and cloud
-failure behavior remain untested.
+and local logs in Aspire. The [cloud preview record](cloud-preview.md) describes
+the initial deployment and measured cloud coverage; cloud failure behavior and
+the full vertical slice remain untested.
 
 Build/unit/template/acceptance commands below run in the framework repository.
 Generated apps expose browser tests and telemetry verification; they do not carry

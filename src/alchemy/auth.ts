@@ -23,6 +23,7 @@ export interface AuthWorkerOptions {
 export function createAuthWorker(options: AuthWorkerOptions) {
   return Cloudflare.Worker("Auth", {
     main: options.main, workersDev: false,
+    observability: { enabled: true },
     env: { ...(options.email ? { Email: options.email } : {}), FLARESTACK_ADMIN_USER_IDS: process.env.FLARESTACK_ADMIN_USER_IDS ?? "" },
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
   }, Effect.gen(function* () {

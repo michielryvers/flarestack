@@ -45,7 +45,9 @@ one tested set, update its package references/lockfile, and refresh only the cha
 local-preview package directories in its private `.packages/nuget` cache. Check
 release notes for schema or cookie/session changes and expect reauthentication
 when session contracts change. Keep `patches/` while using the pinned Alchemy
-version; both resource readiness and local Worker startup need the bundled fixes. Immutable published versions and cloud deployment remain future work.
+version; both resource readiness and local Worker startup need the bundled fixes.
+Immutable published versions remain future work. See the [initial cloud deployment
+record](cloud-preview.md) for measured cloud coverage and remaining checks.
 
 
 ## Preview 1 → preview 2

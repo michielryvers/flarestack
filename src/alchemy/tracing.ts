@@ -16,7 +16,7 @@ export async function tracedRequest(service: string, request: Request, run: (req
         .catch(() => done({ code: ExportResultCode.FAILED }));
     }, shutdown: async () => {},
   };
-  const provider = new BasicTracerProvider({ resource: resourceFromAttributes({ "service.name": service }), spanProcessors: [new SimpleSpanProcessor(exporter)] });
+  const provider = new BasicTracerProvider({ resource: resourceFromAttributes({ "service.name": service }), spanProcessors: telemetry?.OTEL_EXPORTER_OTLP_ENDPOINT === "" ? [] : [new SimpleSpanProcessor(exporter)] });
   const propagator = new W3CTraceContextPropagator();
   const parent = propagator.extract(ROOT_CONTEXT, request.headers, { keys: h => [...h.keys()], get: (h, key) => h.get(key) ?? undefined });
   const path = telemetryPath(new URL(request.url).pathname);

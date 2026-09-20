@@ -1,9 +1,10 @@
 @page "/"
+@inject IWebHostEnvironment Environment
 <PageTitle>Flarestack Todo</PageTitle>
 <section class="welcome">
     <span class="eyebrow">A LITTLE SPACE TO GET THINGS DONE</span>
     <h1>Clear your mind.<br /><em>Make room for doing.</em></h1>
     <p>Your tasks, in one quiet place. A working demonstration of .NET and Blazor on Cloudflare.</p>
     <a class="button" href="/todos" data-enhance-nav="false">Open my workspace <span>→</span></a>
-    <div class="feature-row"><span>✓ Private to you</span><span>✓ Saved in D1</span><span>✓ Traced in Aspire</span></div>
+    <div class="feature-row"><span>✓ Private to you</span><span>✓ Saved in D1</span>@if (Environment.IsDevelopment()) { <span>✓ Traced in Aspire</span> }</div>
 </section>

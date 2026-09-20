@@ -1,3 +1,4 @@
+import { protocolVersion } from "./protocol.ts";
 export function isAuthPath(path: string): boolean {
   return path === "/auth" || path.startsWith("/auth/") ||
     path === "/.well-known/openid-configuration/auth" ||
@@ -21,7 +22,7 @@ export function forwardedRequest(request: Request): Request {
 
 export async function route(request: Request, auth: (request: Request) => Promise<Response>, app: (request: Request) => Promise<Response>): Promise<Response> {
   const url = new URL(request.url);
-  if (request.method === "GET" && url.pathname === "/_flarestack/health") return Response.json({ status: "ok", protocolVersion: 1 });
+  if (request.method === "GET" && url.pathname === "/_flarestack/health") return Response.json({ status: "ok", protocolVersion });
   if (request.method === "GET" && url.pathname === "/_flarestack/ready") {
     try {
       const target = new URL("/auth/.well-known/openid-configuration", url);

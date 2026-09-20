@@ -10,8 +10,9 @@ export interface EmailWorkerOptions { main: string; from: string; }
 export function createEmailWorker(options: EmailWorkerOptions) {
   if (!validateEmail({to: options.from, subject: "test", text: "test"})) throw new Error("Invalid email sender");
   return Cloudflare.Worker("Email", { main: options.main, workersDev: false,
+    observability: { enabled: true },
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
-    env: { OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318", OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "" },
+    env: { FLARESTACK_EMAIL_FROM: options.from, OTEL_EXPORTER_OTLP_ENDPOINT: process.env.FLARESTACK_DEPLOY === "1" ? (process.env.FLARESTACK_CLOUD_OTLP_ENDPOINT ?? "") : process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4318", OTEL_EXPORTER_OTLP_HEADERS: process.env.FLARESTACK_DEPLOY === "1" ? "" : process.env.OTEL_EXPORTER_OTLP_HEADERS ?? "" },
   }, Effect.gen(function* () {
     const descriptor = yield* Cloudflare.Email.SendEmail("EMAIL", { allowedSenderAddresses: [options.from] });
     const email = yield* Cloudflare.Email.Send(descriptor);
@@ -29,7 +30,8 @@ export function createEmailWorker(options: EmailWorkerOptions) {
         if (!validateEmail(message)) return Response.json({error: "invalid_message"}, {status: 400});
         try {
           const { EmailMessage } = await import("cloudflare:email");
-          await raw.send(new EmailMessage(options.from, message.to, mimeMessage(options.from, message)));
+          const from = String(env.FLARESTACK_EMAIL_FROM);
+          await raw.send(new EmailMessage(from, message.to, mimeMessage(from, message)));
           console.log(JSON.stringify({message: "Email accepted", level: "INFO"}));
           return Response.json({accepted: true}, {status: 202});
         } catch {

@@ -19,7 +19,9 @@
     "doctor": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/doctor.ts samples/Todo/local.json",
     "test:acceptance": "bun scripts/accept-template.ts",
     "check:versions": "bun scripts/check-versions.ts",
-    "smoke:cloud": "bun scripts/smoke-cloud.ts"
+    "smoke:cloud": "bun scripts/smoke-cloud.ts",
+    "plan:cloud": "bun scripts/deploy-cloud.ts plan",
+    "deploy:cloud": "bun scripts/deploy-cloud.ts deploy"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",
