@@ -7,6 +7,12 @@
     <PackageType>Template</PackageType>
     <PackageTags>dotnet-new;templates;blazor;aspire</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/michielryvers/flarestack</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/michielryvers/flarestack.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeContentInPack>true</IncludeContentInPack>
     <EnableDefaultItems>false</EnableDefaultItems>
@@ -17,6 +23,7 @@
   <ItemGroup>
     <Content Include="../../artifacts/template/content/**/*" Pack="true" PackagePath="content/" />
     <None Include="README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>
   <Target Name="RequireStagedTemplate" BeforeTargets="GenerateNuspec">
     <Error Condition="!Exists('../../artifacts/template/content/.template.config/template.json')" Text="Run bun run prepare:local to stage and pack the template." />
