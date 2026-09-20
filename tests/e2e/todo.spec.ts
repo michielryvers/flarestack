@@ -1,3 +1,4 @@
+import { runAspire } from "./aspire.ts";
 import {inboxUrl, origin} from "./local.ts";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -64,8 +65,8 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
  await page.goto("/todos");
  // Restart only this stack's application container, never unrelated containers.
  if (process.env.FLARESTACK_TEST_MODE !== "Container") {
-   await exec("aspire", ["resource", "todo", "restart", "--non-interactive"]);
-   await exec("aspire", ["wait", "todo", "--non-interactive"]);
+   await runAspire(["resource", "todo", "restart", "--non-interactive"]);
+   await runAspire(["wait", "todo", "--non-interactive"]);
  } else {
    const {stdout} = await exec("docker", ["ps", "--filter", "name=^workerd-flarestack-compatibility-", "--format", "{{.ID}} {{.Names}}"]);
    const apps = stdout.trim().split("\n").filter(line => !line.endsWith("-proxy"));

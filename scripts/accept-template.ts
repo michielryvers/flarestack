@@ -4,6 +4,7 @@ import {resolve,join} from "node:path";
 import {Database} from "bun:sqlite";
 import {diagnosticLine,diagnosticSummary} from "./acceptance-diagnostics.ts";
 import {stopPreparationProcess} from "./package-process.ts";
+import {aspireExecutable} from "../tests/e2e/aspire.ts";
 import {LocalLogs,readLines} from "../src/alchemy/local/logs.ts";
 const root=resolve(import.meta.dirname,"..");
 const {version}=await Bun.file(join(root,"version.json")).json();
@@ -17,7 +18,7 @@ const appName=process.env.FLARESTACK_ACCEPTANCE_APP_NAME??`Acceptance.${mode}Not
 const base=Number(process.env.FLARESTACK_ACCEPTANCE_PORT??9200);
 const endpoint=`http://127.0.0.1:${base+9}`;
 const logs=new LocalLogs(endpoint);
-const env={...process.env,TMPDIR:join(directory,"tmp"),TEMP:join(directory,"tmp"),TMP:join(directory,"tmp"),DOTNET_CLI_HOME:join(directory,"dotnet-home"),BUN_INSTALL_CACHE_DIR:join(directory,"bun-cache"),Flarestack__LocalMode:mode,FLARESTACK_TEST_MODE:mode,FLARESTACK_TEST_ADMIN:"1",FLARESTACK_DASHBOARD_URL:`http://127.0.0.1:${base+4}`};
+const env={...process.env,FLARESTACK_ASPIRE_EXECUTABLE:aspireExecutable(),TMPDIR:join(directory,"tmp"),TEMP:join(directory,"tmp"),TMP:join(directory,"tmp"),DOTNET_CLI_HOME:join(directory,"dotnet-home"),BUN_INSTALL_CACHE_DIR:join(directory,"bun-cache"),Flarestack__LocalMode:mode,FLARESTACK_TEST_MODE:mode,FLARESTACK_TEST_ADMIN:"1",FLARESTACK_DASHBOARD_URL:`http://127.0.0.1:${base+4}`};
 const archive=join(root,`artifacts/templates/Flarestack.Templates.${version}.nupkg`);
 const old=process.env.FLARESTACK_UPGRADE_FROM;
 let dashboard:Bun.Subprocess|undefined;
@@ -56,6 +57,8 @@ try {
  await mkdir(app,{recursive:true});
  dashboard=Bun.spawn(["aspire","dashboard","run","--non-interactive","--allow-anonymous","--frontend-url",`http://127.0.0.1:${base+8}`,"--otlp-http-url",endpoint,"--otlp-grpc-url",`http://127.0.0.1:${base+10}`],{cwd:directory,env,stdout:"ignore",stderr:"ignore"});
  for(let i=0;i<60;i++){try{if((await fetch(`http://127.0.0.1:${base+8}`)).ok)break;}catch{}if(i===59)throw new Error("Acceptance log collector did not start");await Bun.sleep(500);}
+ logs.emit("flarestack.acceptance", `Aspire native executable: ${env.FLARESTACK_ASPIRE_EXECUTABLE}`);
+ console.log(`Aspire native executable: ${env.FLARESTACK_ASPIRE_EXECUTABLE}`);
  await install(old?resolve(old):archive);
  await run(["dotnet","new","flarestack-blazor","-n",appName,"-o",app],directory);
  await run(["dotnet","restore"]);await run(["bun","install","--frozen-lockfile"]);

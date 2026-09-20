@@ -27,6 +27,7 @@ test.each([
   const directory = await mkdtemp(join(tmpdir(), "flarestack-template-test-"));
   try {
     await dotnet(["new", "flarestack-blazor", "-n", name, "-o", directory]);
+    expect(await readFile(join(directory, "tests/e2e/aspire.ts"))).toEqual(await readFile(join(root, "tests/e2e/aspire.ts")));
     const local = await Bun.file(join(directory, "local.json")).json();
     expect(local.stackName).toBe(`app-${slug}`);
     expect(local.project).toBe(`${project}.Web/${project}.Web.csproj`);

@@ -4,7 +4,7 @@
   "packageManager": "bun@1.4.2",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/package-process.test.ts ./scripts/acceptance-diagnostics.test.ts",
+    "test": "bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/package-process.test.ts ./scripts/acceptance-diagnostics.test.ts ./scripts/e2e-process.test.ts",
     "verify:telemetry": "bun tests/e2e/verify-telemetry.ts",
     "dev": "aspire run",
     "test:e2e": "playwright test",

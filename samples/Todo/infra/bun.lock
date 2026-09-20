@@ -5,7 +5,7 @@
     "": {
       "name": "flarestack-todo-infra",
       "dependencies": {
-        "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-f63bce1cd70ed7e4.tgz",
+        "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-11fe59b487d129fd.tgz",
         "alchemy": "2.0.0-beta.79",
       },
     },
@@ -145,7 +145,7 @@
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 
-    "@flarestack/alchemy": ["@flarestack/alchemy@../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-f63bce1cd70ed7e4.tgz", { "dependencies": { "@alchemy.run/better-auth": "2.0.0-beta.79", "@better-auth/oauth-provider": "1.7.5", "@cloudflare/containers": "0.3.7", "@cloudflare/workers-types": "5.20260919.1", "@effect/platform-bun": "4.0.0-rc.116", "@effect/platform-node": "4.0.0-rc.116", "@opentelemetry/api": "1.9.0", "@opentelemetry/core": "2.11.0", "@opentelemetry/exporter-logs-otlp-proto": "0.222.0", "@opentelemetry/otlp-transformer": "0.222.0", "@opentelemetry/resources": "2.11.0", "@opentelemetry/sdk-logs": "0.222.0", "@opentelemetry/sdk-trace-base": "2.11.0", "@types/bun": "1.4.2", "alchemy": "2.0.0-beta.79", "better-auth": "1.7.5", "better-call": "1.4.0", "effect": "4.0.0-rc.116" } }, "sha512-sGiKJ5T5X6Y6vFk8nuO9fyQDVZGaI4MUrefvJVIJvV0DIOGgSyhXTc6xZn4Vifv6twzUdp2p67leOASQYtfdjg=="],
+    "@flarestack/alchemy": ["@flarestack/alchemy@../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-11fe59b487d129fd.tgz", { "dependencies": { "@alchemy.run/better-auth": "2.0.0-beta.79", "@better-auth/oauth-provider": "1.7.5", "@cloudflare/containers": "0.3.7", "@cloudflare/workers-types": "5.20260919.1", "@effect/platform-bun": "4.0.0-rc.116", "@effect/platform-node": "4.0.0-rc.116", "@opentelemetry/api": "1.9.0", "@opentelemetry/core": "2.11.0", "@opentelemetry/exporter-logs-otlp-proto": "0.222.0", "@opentelemetry/otlp-transformer": "0.222.0", "@opentelemetry/resources": "2.11.0", "@opentelemetry/sdk-logs": "0.222.0", "@opentelemetry/sdk-trace-base": "2.11.0", "@types/bun": "1.4.2", "alchemy": "2.0.0-beta.79", "better-auth": "1.7.5", "better-call": "1.4.0", "effect": "4.0.0-rc.116" } }, "sha512-/cSCPNGlptucXFU3rCxOBBaqvSeao4Kfk51m9FebKgs9HoJ5eT7rIwQW9mx+q7l7nMzkSJub6dM9yR0sljYP1g=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.9", "", { "peerDependencies": { "hono": "^4" } }, "sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw=="],
 

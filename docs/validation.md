@@ -11,15 +11,17 @@ recorded separately from the broader local suite.
 | CSRF / owner-scoped API / cross-user isolation | Passed | Passed | Passed |
 | Browser logs and connected Worker/.NET/D1/auth/email traces | Verified in Aspire | Verified in Aspire | Export not configured |
 | Blazor WebSockets / owned CRUD | Passed | Passed | Browser CRUD and live workspace revocation passed |
-| Email verification and password recovery | Capture + browser passed | Capture + browser passed | Disabled on this stage; earlier preview delivery verified separately |
+| Email verification and password recovery | Capture + browser passed | Capture + browser passed | Automated suite disabled email; later real verification requested, recipient confirmation pending |
 | Admin roles, disable/enable, session revocation | Packed browser passed | Packed browser passed | Browser/API passed |
 | Auth failure / protocol mismatch | Unit + private-handler tests | Same transport contracts | Fault injection not run |
 | Razor hot reload | Previously tested | Restart required | Not applicable |
 | Packed clean install / restart | Passed on Linux | Passed on Linux | Fresh external generated project deployed |
 | Windows hosted CI | In progress | Not run | Not applicable |
-| Container sleep/wake / replacement | Startup/restart tested | Startup/restart tested | Explicit cold-start lifecycle not tested |
+| Container sleep/wake / replacement | Startup/restart tested | Startup/restart tested | Inactive → restarted and healthy observed; isolated wake trigger/timing unverified |
 
-The automated cloud stage uses synthetic accounts with email disabled. This does
+The automated cloud journey used synthetic accounts with email disabled. Email
+was enabled afterward and a real verification message requested; recipient
+confirmation remains pending. This does
 not establish verification/recovery delivery, custom-domain behavior, cloud OTLP
 export, or session persistence across container replacement. The earlier
 [cloud preview record](cloud-preview.md) is separate historical evidence.
@@ -27,8 +29,8 @@ export, or session persistence across container replacement. The earlier
 ## Reproduction
 
 Preview `0.1.0-local.2` uses protocol 2. Current verification includes **177 .NET
-tests**, **157 Bun tests**, TypeScript checking and two packed-template generation
-tests (88 assertions). Fresh Fast and Container applications with the same name
+tests**, **159 Bun tests**, TypeScript checking and two packed-template generation
+tests (90 assertions). Fresh Fast and Container applications with the same name
 were generated outside the repository and run concurrently on separate port
 blocks. Both passed administration, recovery, Todo isolation, migration/data
 retention and Aspire log/trace checks. Their Alchemy registries are app-local.

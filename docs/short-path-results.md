@@ -39,7 +39,7 @@ dotnet test Flarestack.slnx --no-restore
 bun run test:template
 ```
 
-Results: 177 .NET tests, 157 Bun tests and two template-generation tests passed.
+Results: 177 .NET tests, 159 Bun tests and two template-generation tests passed.
 Type checking, version alignment, package creation and generated .NET/TypeScript
 builds passed. No test was disabled to obtain these results.
 
@@ -112,12 +112,36 @@ D1 or replacement of the test identities to hide these failures.
 The automated journey had email disabled: synthetic signup does not prove email
 verification or recovery delivery. A subsequent deployment enabled the previously
 authorized sender and successfully requested a real verification email; recipient
-confirmation is pending. Earlier manual Todo preview delivery is recorded separately. Cloud trace export, explicit container sleep/wake and fault
-injection were not tested. The first successful startup is not a substitute for
-those lifecycle checks.
+confirmation is pending. Earlier manual Todo preview delivery is recorded separately.
+
+At 21:30:08 UTC the control plane reported the application container inactive.
+A subsequent single health request returned HTTP 200 in 3.293 seconds, and a
+follow-up observed a running instance with a new start timestamp. That timestamp
+preceded the health request, so concurrent traffic or delayed control-plane
+reporting prevents attributing the wake to that request. Sleep/restart and healthy
+recovery were observed; isolated first-request cold-start latency remains
+unverified. Cloud trace export and fault injection were not tested.
+
+The final refreshed archive (digest recorded below) was redeployed to the same
+stage at 21:38:09 UTC. Frozen dependency installation, TypeScript checking, forced
+NuGet restore and a clean generated-app build passed first. The redeploy passed
+HTTPS OIDC discovery, health/readiness, and rejection of private auth/D1 routes.
+Hashes confirmed unchanged email settings, application identity, infrastructure
+sources, migrations, original acceptance state and its original archive. This
+refresh did not rerun the full browser suite or request another email; the full
+journey above and this final redeploy remain separate evidence.
 
 No automatic teardown occurred. Destruction must separately name and confirm
 `app-journeysept20-staging`; the stage and private evidence workspace are retained.
+
+## Publication safety
+
+Gitleaks 8.30.1 scanned the tracked-source snapshot, recursively unpacked template
+archives, and retained deployment/local-validation logs. Archives and logs had no
+findings. The source scan matched one vendored skills provenance digest; all 65
+manifest SHA-256 values were independently recomputed and matched their files.
+No credential exception or scanner suppression was added. Private credentials,
+account fixtures and state snapshots remain outside tracked source.
 
 ## Hosted CI and limitations
 
@@ -125,13 +149,18 @@ Linux Fast and Container journeys passed locally and in hosted CI run
 [35537980021](https://github.com/michielryvers/flarestack/actions/runs/35537980021).
 Clean local runs with `CI=true` passed after moving development state off the
 cloud backend: Fast `run-fbVD5g`, Container `run-Inm3QJ`, each with seven browser
-cases, migration/restart and connected traces. A prior local Bun install stalled;
+cases, migration/restart and connected traces. Their connected D1 trace IDs were
+`783a46908508dd1dd496c370be12d03e` (Fast) and
+`5b29cc5593adb2e85576a65a347c48cb` (Container). A prior local Bun install stalled;
 an isolated retry recovered it, and the final fresh Fast run completed unaided.
 
 Windows now completes packaging and process-tree cleanup. Its hosted run found a
 test expectation using an 8.3 temporary-path alias rather than the canonical path;
-that assertion is corrected, and full Windows acceptance is still pending. macOS
-and Windows Container mode remain unverified.
+that assertion was corrected. The next run started a healthy generated app but
+three browser cases could not launch Aspire through Node on Windows. A shared
+no-shell resolver now passes the absolute native executable, with contract tests
+for case-insensitive PATH keys and literal arguments. Full Windows acceptance is
+being rerun. macOS and Windows Container mode remain unverified.
 
 The original local Todo installation was also migrated: eight legacy development
 state records were imported through read-only remote requests into private local
@@ -139,6 +168,18 @@ files. The database ID was matched to the existing simulator SQLite filename;
 pre-existing users and Todo rows exactly matched the private pre-migration backup
 after restart. Root account/Todo browser tests and connected Aspire traces passed.
 No remote state was deleted.
+
+Final package creation and both template-generation tests were repeated after the
+portable process-cleanup changes. The template SHA-256 was
+`8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7`.
+All six nested package archives passed a fresh secret scan. A subsequent template-only
+repack added the Windows browser-test executable resolver; its SHA-256 was
+`7595045b9506fe0ef8331cd6276eeb3e6ba165841f1a9585e9700245c658d2a0`.
+The embedded runtime packages are unchanged; both template cases passed with
+90 assertions, including helper-file preservation. The original Todo app
+was restored in Fast mode, with saved administrator configuration, HTTP 200 health,
+readiness and OIDC responses, OTLP logs from all required services, and a connected
+Worker → .NET trace. It remains available locally.
 
 Production remains gated on explicitly acknowledging ephemeral ASP.NET Data
 Protection keys; one application container is enforced. Browser cookies may become

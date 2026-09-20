@@ -57,7 +57,7 @@ hostSettings.Flarestack.ApplicationName = "app";
 await emit("FlarestackTemplate.AppHost/appsettings.json", JSON.stringify(hostSettings,null,2)+"\n");
 await emit("aspire.config.json", JSON.stringify({ appHost: { path: "FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" } }, null, 2));
 await emit("FlarestackTemplate.slnx", '<Solution>\n  <Project Path="FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" />\n  <Project Path="FlarestackTemplate.Web/FlarestackTemplate.Web.csproj" />\n  <Project Path="FlarestackTemplate.Client/FlarestackTemplate.Client.csproj" />\n  <Project Path="FlarestackTemplate.ServiceDefaults/FlarestackTemplate.ServiceDefaults.csproj" />\n</Solution>\n');
-for (const file of ["todo.spec.ts", "accounts.ts", "local.ts", "accounts.spec.ts", "admin.spec.ts", "hot-reload.spec.ts", "verify-telemetry.ts"]) {
+for (const file of ["aspire.ts", "todo.spec.ts", "accounts.ts", "local.ts", "accounts.spec.ts", "admin.spec.ts", "hot-reload.spec.ts", "verify-telemetry.ts"]) {
   const source = await readFile(resolve(root, "tests/e2e", file), "utf8");
   await emit(`tests/e2e/${file}`, transform(source)
     .replaceAll('"todo",', '"app",').replaceAll("workerd-flarestack-compatibility-", "workerd-app-TemplateSlug-")

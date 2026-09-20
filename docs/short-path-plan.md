@@ -75,7 +75,7 @@ Use explicit Bun test paths: bare filters can discover ignored audit snapshots.
 - [x] Live health/auth/Todo/ownership/session checks, with email coverage stated.
 - [x] Redeploy and migration preserve data and stable resources.
 - [ ] Captured diagnostics and separately confirmed test-stage teardown.
-- [ ] Secret scans of source, generated artifacts, and deployment transcript.
+- [x] Secret scans of source, generated artifacts, and deployment transcript.
 - [x] Release artifacts and publication/credential limitations documented.
 
 ## Implementation checkpoint

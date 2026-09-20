@@ -1,6 +1,4 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-const exec = promisify(execFile);
+import { runAspire } from "./aspire.ts";
 import { test, expect } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -8,7 +6,7 @@ test("Razor edits appear through the Worker without restarting Alchemy", async (
  test.skip(process.env.FLARESTACK_TEST_HOT_RELOAD !== "1", "Opt in: this test temporarily edits and restores Home.razor");
  const path = resolve("samples/Todo/Todo.Web/Components/Pages/Home.razor");
  const platformPid = async () => {
-   const {stdout} = await exec("aspire", ["describe", "--format", "Json", "--non-interactive"]);
+   const {stdout} = await runAspire(["describe", "--format", "Json", "--non-interactive"]);
    const model = JSON.parse(stdout);
    return model.resources.find((resource: {displayName: string}) => resource.displayName === "cloudflare").properties["executable.pid"];
  };
