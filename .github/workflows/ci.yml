@@ -30,8 +30,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
-      FLARESTACK_TEST_MODE: ${{ matrix.mode }}
-      Flarestack__LocalMode: ${{ matrix.mode }}
       CI: 'true'
       DOTNET_NOLOGO: 'true'
     steps:
@@ -56,13 +54,24 @@ jobs:
       - name: Type check
         run: bun run check
       - name: TypeScript contracts
-        run: bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts
+        run: bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/acceptance-diagnostics.test.ts ./scripts/package-process.test.ts ./scripts/cloud-acceptance.test.ts
       - name: .NET contracts
         run: dotnet test Flarestack.slnx --no-restore
       - name: Template generation contracts
         run: bun run test:template
       - name: Generated application acceptance and telemetry
+        env:
+          FLARESTACK_TEST_MODE: ${{ matrix.mode }}
+          FLARESTACK_ACCEPTANCE_SUMMARY: ${{ runner.temp }}/acceptance-failure-summary.json
         run: bun run test:acceptance
+      - name: Upload sanitized acceptance failure summary
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: acceptance-failure-${{ matrix.os }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/acceptance-failure-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Stop repository AppHost if needed
         if: always()
         continue-on-error: true

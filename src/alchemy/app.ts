@@ -2,6 +2,10 @@ import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import * as Redacted from "effect/Redacted";
+import * as Layer from "effect/Layer";
+import { AlchemyContext } from "alchemy/AlchemyContext";
+import { Stage } from "alchemy/Stage";
+import { prepareLocalState } from "./local/state.ts";
 import type { DotNet } from "./worker.ts";
 import type { createAuthWorker } from "./auth.ts";
 import { containerSleepAfter, validateAdditionalBindings, validateContainerCount } from "./extensions.ts";
@@ -79,7 +83,14 @@ export function FlarestackApp(options: FlarestackAppOptions) {
         ? Redacted.make(JSON.stringify(options.container.environment))
         : { ...options.container.environment, ...(process.env.FLARESTACK_LOCAL_OTLP_HEADERS ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.FLARESTACK_LOCAL_OTLP_HEADERS } : {}) } },
   });
-  return Alchemy.Stack(options.name, { providers: Cloudflare.providers(), state: Cloudflare.state() },
+  const state = Layer.unwrap(Effect.gen(function* () {
+    const context = yield* AlchemyContext;
+    if (!context.dev) return Cloudflare.state();
+    const stage = yield* Stage;
+    yield* Effect.promise(() => prepareLocalState(context.dotAlchemy, options.name, stage));
+    return Alchemy.localState();
+  }));
+  return Alchemy.Stack(options.name, { providers: Cloudflare.providers(), state },
     Effect.gen(function* () {
       if (LocalBridge) yield* LocalBridge;
       const worker = yield* Worker;

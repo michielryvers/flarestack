@@ -1,6 +1,7 @@
 import { mkdir, rm, readFile, writeFile, copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { LocalLogs, readLines } from "../src/alchemy/local/logs.ts";
+import { stopPreparationProcess } from "./package-process.ts";
 
 const root = resolve(import.meta.dirname, "..");
 process.chdir(root);
@@ -16,19 +17,24 @@ const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:43
 const logs = new LocalLogs(endpoint);
 let dashboard: Bun.Subprocess | undefined;
 const children = new Set<Bun.Subprocess>();
-const readers: Promise<void>[] = [];
+const readers = new Map<Bun.Subprocess, Promise<void>[]>();
+let collecting = true;
 let interrupted = false;
 function interrupt() {
   interrupted = true;
-  for (const child of children) if (child !== dashboard && child.exitCode === null) child.kill("SIGTERM");
+  for (const child of children) {
+    if (child !== dashboard && child.exitCode === null) void stopPreparationProcess(child).catch(error => { console.error(error); process.exitCode = 1; });
+  }
 }
 process.on("SIGINT", interrupt);
 process.on("SIGTERM", interrupt);
 function spawn(command: string[], cwd = root, service = "flarestack.packages") {
   const child = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, NO_COLOR: "1" } });
   children.add(child);
-  readers.push(readLines(child.stdout, line => { console.log(line); logs.emit(service, line); }));
-  readers.push(readLines(child.stderr, line => { console.error(line); logs.emit(service, line, "stderr"); }));
+  readers.set(child, [
+    readLines(child.stdout, line => { console.log(line); if (collecting) logs.emit(service, line); }),
+    readLines(child.stderr, line => { console.error(line); if (collecting) logs.emit(service, line, "stderr"); }),
+  ]);
   return child;
 }
 async function run(command: string[], cwd = root) {
@@ -87,10 +93,21 @@ try {
   process.exitCode = 1;
   console.error(error);
 } finally {
-  for (const child of children) if (child !== dashboard && child.exitCode === null) child.kill("SIGTERM");
-  await logs.shutdown();
-  dashboard?.kill("SIGINT");
-  await Promise.race([Promise.all(readers), Bun.sleep(3000)]);
-  process.off("SIGINT", interrupt);
-  process.off("SIGTERM", interrupt);
+  try {
+    const workers = [...children].filter(child => child !== dashboard);
+    await Promise.all(workers.map(child => stopPreparationProcess(child)));
+    await Promise.race([Promise.all(workers.flatMap(child => readers.get(child) ?? [])), Bun.sleep(3000)]);
+  } finally {
+    collecting = false;
+    try { await logs.shutdown(); }
+    finally {
+      try {
+        if (dashboard) await stopPreparationProcess(dashboard);
+        await Promise.race([Promise.all([...readers.values()].flat()), Bun.sleep(3000)]);
+      } finally {
+        process.off("SIGINT", interrupt);
+        process.off("SIGTERM", interrupt);
+      }
+    }
+  }
 }

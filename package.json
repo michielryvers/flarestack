@@ -4,7 +4,7 @@
   "packageManager": "bun@1.4.2",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/cloud-acceptance.test.ts",
+    "test": "bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/package-process.test.ts ./scripts/acceptance-diagnostics.test.ts",
     "verify:telemetry": "bun tests/e2e/verify-telemetry.ts",
     "dev": "aspire run",
     "test:e2e": "playwright test",
@@ -24,7 +24,8 @@
     "deploy:cloud": "bun scripts/deploy-cloud.ts deploy",
     "destroy:cloud": "bun scripts/deploy-cloud.ts destroy",
     "tunnel": "bun scripts/tunnel.ts",
-    "test:cloud": "bun scripts/accept-cloud.ts"
+    "test:cloud": "bun scripts/accept-cloud.ts",
+    "migrate:local-state": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/migrate-state.ts samples/Todo/local.json"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",

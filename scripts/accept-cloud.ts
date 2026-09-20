@@ -6,7 +6,7 @@ import { deploymentLogs } from "../src/alchemy/deploy/telemetry.ts";
 import { LocalLogs, readLines } from "../src/alchemy/local/logs.ts";
 import { redactOutput } from "../src/alchemy/deploy/safety.ts";
 import { stopProcess } from "../src/alchemy/local/platform.ts";
-import { acceptanceArguments, acceptanceWorkspace, bootstrapAdministrator, CloudAcceptanceError, deploymentResult, login, logout, migrationSql, type Marker, type TestAccount, restoreTestAccount, verifyAdministration, verifyTodos } from "./cloud-acceptance.ts";
+import { acceptanceArguments, acceptanceWorkspace, bootstrapAdministrator, browserFailureDiagnostics, CloudAcceptanceError, deploymentResult, login, logout, migrationSql, type Marker, type TestAccount, restoreTestAccount, verifyAdministration, verifyTodos } from "./cloud-acceptance.ts";
 import { smokeCloud } from "./smoke-cloud.ts";
 
 interface State {
@@ -189,6 +189,14 @@ async function acceptCloud() {
     if (processExportFailed) throw new CloudAcceptanceError("Acceptance log export failed; resources were retained.");
     await log.flush();
     completed = true;
+  } catch (error) {
+    if (browser) {
+      const secrets = { ...environment, acceptance_password_a: state.accounts[0].password, acceptance_password_b: state.accounts[1].password };
+      const pages = browser.contexts().flatMap(context => context.pages().map(page => page.url()));
+      await diagnosticsWrites;
+      await appendFile(diagnostics, browserFailureDiagnostics(error, pages, secrets) + "\n", { mode: 0o600 });
+    }
+    throw error;
   } finally {
     try {
       await diagnosticsWrites;

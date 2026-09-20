@@ -18,3 +18,91 @@ index 4e056c4e52c2a6f9b4d8ed08bb35d900171c4d07..0cf750712f2ebe6f38a44cac477bb267
        return;
      }
  
+diff --git a/src/Cloudflare/Local.ts b/src/Cloudflare/Local.ts
+index a5f43e8b1fc2fba1f9a9cf8278f3dd00b77df4ed..e8935869465ccde467c08986f342767068472fcf 100644
+--- a/src/Cloudflare/Local.ts
++++ b/src/Cloudflare/Local.ts
+@@ -6,10 +6,8 @@
+ import * as Layer from "effect/Layer";
+ import { DockerLive } from "../Docker/Docker.ts";
+ import type * as RpcServer from "../Local/RpcServer.ts";
+-import { CloudflareAuth } from "./Auth/AuthProvider.ts";
+-import * as CloudflareEnvironment from "./CloudflareEnvironment.ts";
+ import { LocalContainerProvider } from "./Containers/LocalContainerProvider.ts";
+-import * as Credentials from "./Credentials.ts";
++import { localCredentials } from "./LocalCredentials.ts";
+ import { ProviderLocal as D1ProviderLocal } from "./D1/Database.ts";
+ import { localRuntimeServices } from "./LocalRuntime.ts";
+ import { ProviderLocal } from "./Queues/Queue.ts";
+@@ -17,13 +15,7 @@ import { ConsumerProviderLocal } from "./Queues/Consumer.ts";
+ import { SecretProviderLocal } from "./SecretsStore/Secret.ts";
+ import { LocalWorkerProvider } from "./Workers/LocalWorkerProvider.ts";
+ 
+-const cloudflareServices = Layer.provide(
+-  Layer.merge(
+-    Credentials.fromAuthProvider(),
+-    CloudflareEnvironment.fromProfile(),
+-  ),
+-  CloudflareAuth,
+-);
++const cloudflareServices = localCredentials();
+ 
+ export default Layer.mergeAll(
+   LocalWorkerProvider(),
+diff --git a/src/Cloudflare/LocalCredentials.ts b/src/Cloudflare/LocalCredentials.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..006f0d1d0e4bc0134a97d81b3b82537971f2b46c
+--- /dev/null
++++ b/src/Cloudflare/LocalCredentials.ts
+@@ -0,0 +1,20 @@
++import * as Effect from "effect/Effect";
++import * as Layer from "effect/Layer";
++import * as Redacted from "effect/Redacted";
++import { CloudflareEnvironment } from "./CloudflareEnvironment.ts";
++import { Credentials } from "./Credentials.ts";
++
++// Flarestack local Worker bindings and D1 gateways need an account namespace,
++// not cloud authorization. Never read a real profile or authorize remote APIs.
++// The local sidecar and stack evaluation must use the same namespace.
++export const localCredentials = () => Layer.mergeAll(
++  Layer.succeed(CloudflareEnvironment, Effect.succeed({
++    type: "apiToken" as const,
++    accountId: "00000000000000000000000000000000",
++    apiToken: Redacted.make(""),
++    source: { type: "env" as const },
++  })),
++  Layer.succeed(Credentials, Effect.die(new Error(
++    "Cloudflare API access is unavailable in Flarestack local development; use an authenticated cloud deployment for remote resources.",
++  ))),
++);
+diff --git a/src/Cloudflare/Providers.ts b/src/Cloudflare/Providers.ts
+index ab1fc560012835b76360c264cc47cb0e6e6872f9..27b8a1fbeac3e7b475887e6e3877c0b4724bf29c 100644
+--- a/src/Cloudflare/Providers.ts
++++ b/src/Cloudflare/Providers.ts
+@@ -1,3 +1,7 @@
++import * as Effect from "effect/Effect";
++import * as Option from "effect/Option";
++import { AlchemyContext } from "../AlchemyContext.ts";
++import { localCredentials } from "./LocalCredentials.ts";
+ import * as Layer from "effect/Layer";
+ import { CredentialsStoreLive } from "../Auth/Credentials.ts";
+ import { ProfileStoreLive } from "../Auth/Profile.ts";
+@@ -675,10 +679,16 @@ export const providers = () =>
+  * in the SDK's global error map, so that default covers them.
+  */
+ export const CloudflareApiLive = () =>
+-  Credentials.fromAuthProvider().pipe(
++  Layer.unwrap(Effect.gen(function* () {
++    const context = Option.getOrUndefined(yield* Effect.serviceOption(AlchemyContext));
++    if (context?.dev) {
++      return Layer.merge(localCredentials(), Access.AccessLive);
++    }
++    return Credentials.fromAuthProvider().pipe(
+     Layer.provideMerge(CloudflareEnvironment.fromProfile()),
+     Layer.provideMerge(CloudflareAuth),
+     Layer.provideMerge(Access.AccessLive),
+     Layer.provideMerge(ProfileStoreLive),
+     Layer.provideMerge(CredentialsStoreLive),
+-  );
++    );
++  }));

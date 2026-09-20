@@ -49,6 +49,7 @@ test.each([
     expect(await Bun.file(join(directory, config.appHost.path)).exists()).toBe(true);
     const manifest = await Bun.file(join(directory, "package.json")).json();
     expect(manifest.name).toBe(`app-${slug}`);
+    expect(manifest.scripts["migrate:local-state"]).toBe("bun node_modules/@flarestack/alchemy/local/migrate-state.ts local.json");
     expect(manifest.scripts["dev:container"]).toBe("bun scripts/local-mode.ts container");
     const infraManifest = await Bun.file(join(directory, "infra/package.json")).json();
     expect(infraManifest.scripts["flarestack:deploy"]).toBe("bun ../node_modules/@flarestack/alchemy/deploy/cli.ts ../local.json");

@@ -179,6 +179,14 @@ public sealed class CanonicalHostingTests : IDisposable
     private IDistributedApplicationBuilder CreateBuilder(params string[] args)
     {
         var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions { ProjectDirectory = directory, DisableDashboard = true, Args = args });
+        // These model tests control the Flarestack settings, independent of the
+        // developer's selected application mode. Reapply explicit test arguments last.
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Flarestack:LocalMode"] = null,
+            ["Flarestack:ApplicationName"] = null
+        });
+        builder.Configuration.AddCommandLine(args);
         // Match the launch profile's OTLP endpoint for model tests that evaluate environment callbacks.
         if (builder.Configuration[EndpointKeys[1]] is null)
         {

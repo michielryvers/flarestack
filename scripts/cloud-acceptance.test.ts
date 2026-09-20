@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { acceptanceArguments, acceptanceWorkspace, deploymentResult, migrationSql } from "./cloud-acceptance.ts";
+import { acceptanceArguments, acceptanceWorkspace, browserFailureDiagnostics, deploymentResult, migrationSql } from "./cloud-acceptance.ts";
 import { smokeCloud } from "./smoke-cloud.ts";
 
 const argumentsFor = (stage: string) => ["--app-name", "FlarestackJourneyTest", "--workspace", resolve(tmpdir(), "stable-acceptance"), "--stage", stage, "--template", "packed-template.nupkg"];
@@ -63,4 +63,13 @@ test("private workspace resolves ancestor links and rejects the repository throu
     await expect(acceptanceWorkspace(repository, join(alias, "new", "workspace"))).rejects.toThrow("outside");
     expect(await acceptanceWorkspace(repository, join(root, "outside", "new"))).toBe(join(root, "outside", "new"));
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+
+test("browser failures retain path-only state and omit credentials, query data and DOM call logs", () => {
+  const error = new Error('page.waitForURL: timeout at https://app.test/auth?code=private-code&state=private-state user@example.test saved-password\nCall log: sensitive DOM excerpt');
+  const result = browserFailureDiagnostics(error, ["https://app.test/auth?state=private-state#fragment"], { acceptance_password: "saved-password" });
+  expect(JSON.parse(result).pagePaths).toEqual(["/auth"]);
+  expect(result).toContain("page.waitForURL");
+  for (const secret of ["private-code", "private-state", "user@example.test", "saved-password", "sensitive DOM", "fragment", "https://"]) expect(result).not.toContain(secret);
 });

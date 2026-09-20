@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-b46d94f3ea448b44.tgz",
+    "@flarestack/alchemy": "file:../../../artifacts/npm/flarestack-alchemy-0.1.0-local.2-f63bce1cd70ed7e4.tgz",
     "alchemy": "2.0.0-beta.79"
   },
   "patchedDependencies": {
@@ -18,6 +18,7 @@
   "scripts": {
     "flarestack:dev": "bun node_modules/@flarestack/alchemy/local/dev.ts ../local.json",
     "flarestack:watch": "bun node_modules/@flarestack/alchemy/local/watch-dotnet.ts ../Todo.Web/Todo.Web.csproj",
-    "flarestack:deploy": "bun node_modules/@flarestack/alchemy/deploy/cli.ts ../local.json"
+    "flarestack:deploy": "bun node_modules/@flarestack/alchemy/deploy/cli.ts ../local.json",
+    "migrate:local-state": "bun node_modules/@flarestack/alchemy/local/migrate-state.ts ../local.json"
   }
 }

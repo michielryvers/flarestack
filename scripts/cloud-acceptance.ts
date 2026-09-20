@@ -1,6 +1,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { realpath } from "node:fs/promises";
+import { redactOutput } from "../src/alchemy/deploy/safety.ts";
 
 export class CloudAcceptanceError extends Error {}
 export interface TestAccount { email: string; password: string; registered: boolean; userId?: string }
@@ -38,6 +39,16 @@ export async function acceptanceWorkspace(repository: string, requested: string)
     throw new CloudAcceptanceError("Acceptance workspace must be outside the source repository.");
   }
   return workspace;
+}
+
+export function browserFailureDiagnostics(error: unknown, pageUrls: string[], secrets: Record<string, string | undefined>): string {
+  // A first-line summary excludes Playwright DOM excerpts and detailed request call logs.
+  const message = error instanceof Error ? error.message.split("\n")[0]! : "Browser operation failed.";
+  const safe = redactOutput(message, secrets)
+    .replace(/https?:\/\/[^\s"'<>]+/gi, value => { try { return new URL(value).pathname; } catch { return "[url]"; } })
+    .replace(/[A-Za-z0-9_.+%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email]");
+  const paths = pageUrls.map(value => { try { return new URL(value).pathname; } catch { return "[unavailable]"; } });
+  return JSON.stringify({ phase: "browser-failure", message: safe, pagePaths: paths });
 }
 
 export function migrationSql(marker: Marker): string {
@@ -87,7 +98,7 @@ export async function login(browser: Browser, origin: string, account: TestAccou
   await page.locator("#sign-in-form").waitFor();
   await page.getByLabel("Email", { exact: true }).fill(account.email);
   await page.getByLabel("Password", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: /^Continue/ }).click();
   await page.waitForURL(url => url.origin === origin && url.pathname === "/todos", { timeout: 120_000 });
   await page.getByRole("button", { name: "Add task", exact: true }).waitFor();
   require(callbackSeen, "The real browser login did not traverse the OIDC callback.");
@@ -146,7 +157,8 @@ export async function verifyTodos(owner: BrowserContext, other: BrowserContext, 
 }
 
 export async function logout(page: Page) {
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page.goto("/todos");
+  await page.getByRole("button", { name: /^Sign out/ }).click();
   await page.getByRole("button", { name: "Confirm logout", exact: true }).click();
   await page.waitForURL(url => url.pathname === "/");
   require((await page.request.get("/api/todos", { maxRedirects: 0 })).status() === 401, "Logout did not invalidate application API access.");

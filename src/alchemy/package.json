@@ -12,7 +12,8 @@
     "./local/dev": "./local/dev.ts",
     "./local/watch-dotnet": "./local/watch-dotnet.ts",
     "./deploy/config": "./deploy/config.ts",
-    "./deploy/cli": "./deploy/cli.ts"
+    "./deploy/cli": "./deploy/cli.ts",
+    "./local/migrate-state": "./local/migrate-state.ts"
   },
   "files": [
     "*.ts",
