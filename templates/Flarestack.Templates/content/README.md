@@ -84,6 +84,9 @@ The public interfaces remain injectable into application services.
 
 ## Test and troubleshoot
 
+Browser tests also require Node.js 20 or later for the Playwright CLI. Normal
+application startup uses Bun and does not require Node.js.
+
 ```sh
 bunx playwright install chromium
 bun run test:e2e

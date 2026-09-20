@@ -39,7 +39,7 @@ dotnet test Flarestack.slnx --no-restore
 bun run test:template
 ```
 
-Results: 177 .NET tests, 159 Bun tests and two template-generation tests passed.
+Results: 177 .NET tests, 160 Bun tests and two template-generation tests passed.
 Type checking, version alignment, package creation and generated .NET/TypeScript
 builds passed. No test was disabled to obtain these results.
 
@@ -158,8 +158,10 @@ Windows now completes packaging and process-tree cleanup. Its hosted run found a
 test expectation using an 8.3 temporary-path alias rather than the canonical path;
 that assertion was corrected. The next run started a healthy generated app but
 three browser cases could not launch Aspire through Node on Windows. A shared
-no-shell resolver now passes the absolute native executable, with contract tests
-for case-insensitive PATH keys and literal arguments. Full Windows acceptance is
+no-shell resolver reads the pinned SDK’s Windows `.cmd` launcher as metadata and
+passes its package executable directly. Tests cover the supported launcher shape,
+case-insensitive PATH keys and literal arguments. An early CI probe uses real Node
+to catch executable-resolution failures before packaging. Full Windows acceptance is
 being rerun. macOS and Windows Container mode remain unverified.
 
 The original local Todo installation was also migrated: eight legacy development
@@ -169,17 +171,22 @@ pre-existing users and Todo rows exactly matched the private pre-migration backu
 after restart. Root account/Todo browser tests and connected Aspire traces passed.
 No remote state was deleted.
 
-Final package creation and both template-generation tests were repeated after the
-portable process-cleanup changes. The template SHA-256 was
-`8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7`.
-All six nested package archives passed a fresh secret scan. A subsequent template-only
-repack added the Windows browser-test executable resolver; its SHA-256 was
-`7595045b9506fe0ef8331cd6276eeb3e6ba165841f1a9585e9700245c658d2a0`.
-The embedded runtime packages are unchanged; both template cases passed with
-90 assertions, including helper-file preservation. The original Todo app
-was restored in Fast mode, with saved administrator configuration, HTTP 200 health,
-readiness and OIDC responses, OTLP logs from all required services, and a connected
-Worker → .NET trace. It remains available locally.
+## Final artifacts and local state
+
+| Template artifact | SHA-256 |
+| --- | --- |
+| Final cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
+| Final local template | `ddd4f341444c61c34537047011e74b2a1058648f2a95d65f44c0209f33b63a9d` |
+
+The final template changes only browser-test helpers, their documented Node.js
+prerequisite, and package repository metadata relative to the cloud refresh.
+All five embedded runtime packages and application/infrastructure sources are
+byte-identical. Both template cases passed with 90 assertions; three live
+Playwright Node cases and full Aspire telemetry verification passed locally.
+
+The original Todo app is restored in Fast mode, with saved administrator
+configuration, HTTP 200 health, readiness and OIDC responses, logs from all required
+services, and connected traces. It remains available locally.
 
 Production remains gated on explicitly acknowledging ephemeral ASP.NET Data
 Protection keys; one application container is enforced. Browser cookies may become

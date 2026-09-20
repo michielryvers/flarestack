@@ -9,6 +9,26 @@ repository URL and license file. The npm manifest declares MIT and remains priva
 until the coordinated release is ready. Release builds copy the root license into
 the npm archive before packing.
 
+## Supported preview set
+
+Use this complete pinned set together; independent upgrades are not covered by
+this preview's acceptance results.
+
+| Component | Tested version / contract |
+| --- | --- |
+| Flarestack.D1, Flarestack.Authentication, Flarestack.Email | `0.1.0-local.2` |
+| Aspire.Hosting.Flarestack, @flarestack/alchemy, Flarestack.Templates | `0.1.0-local.2` |
+| Private binding protocol | `2`; mismatches fail explicitly |
+| .NET SDK / ASP.NET package references | `10.0.401` / `10.0.12` |
+| Aspire CLI and hosting | `13.5.3`; experimental deployment adapter is isolated |
+| Bun | `1.4.2` |
+| Alchemy / Better Auth integration | `2.0.0-beta.79` with the bundled patches |
+| Better Auth / OAuth provider | `1.7.5` |
+
+The [validation matrix](validation.md) records platform coverage and limitations.
+The older [compatibility investigation](compatibility.md) explains the upstream
+constraints but is not the current support matrix.
+
 ## One coordinated version
 
 `version.json` is the release identity; `bun scripts/check-versions.ts` verifies the

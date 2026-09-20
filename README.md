@@ -87,7 +87,7 @@ coverage remain deferred. Windows coverage is configured, not yet claimed as pas
 [Public APIs](docs/public-api.md) · [API migration](docs/api-migration.md) ·
 [Database ownership](docs/database.md) · [Security model](docs/security-model.md) ·
 [Accounts and email](docs/accounts-and-email.md) · [Rendering](docs/interactive-auto.md) ·
-[Deployment](docs/deployment.md) · [Infrastructure extensions](docs/infrastructure.md) · [Compatibility](docs/compatibility.md) ·
+[Deployment](docs/deployment.md) · [Infrastructure extensions](docs/infrastructure.md) · [Compatibility](docs/releases.md#supported-preview-set) ·
 [Contributing](CONTRIBUTING.md) · [Security reporting](SECURITY.md)
 
 Licensed under the [MIT License](LICENSE).

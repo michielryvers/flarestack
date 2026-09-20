@@ -1,7 +1,9 @@
 # Contributing
 
 Use the versions pinned by `global.json`, `package.json` and the AppHost: .NET SDK
-10.0.401, Bun 1.4.2 and Aspire CLI 13.5.3. Docker is needed for Container mode only.
+10.0.401, Bun 1.4.2 and Aspire CLI 13.5.3. Docker is needed for Container mode and
+cloud deployment. Browser tests additionally require Node.js 20 or later (the
+pinned Playwright CLI runs under Node).
 Read [AGENTS.md](AGENTS.md) for process ownership and telemetry requirements.
 
 ```sh
