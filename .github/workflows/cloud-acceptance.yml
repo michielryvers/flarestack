@@ -1,0 +1,66 @@
+name: Opt-in cloud acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: Disposable app name prefix (letters/digits); CI appends run ID and attempt for a fresh target
+        type: string
+        required: true
+      confirm_target:
+        description: Type the same prefix to confirm a uniquely named staging deployment retained until explicitly destroyed
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-acceptance-${{ inputs.app_name }}-staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: inputs.app_name == inputs.confirm_target && github.repository == 'michielryvers/flarestack'
+    runs-on: ubuntu-24.04
+    environment: cloud-acceptance
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      APP_NAME: ${{ inputs.app_name }}${{ github.run_id }}A${{ github.run_attempt }}
+      CLOUD_WORKSPACE: ${{ runner.temp }}/flarestack-cloud-acceptance
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: dotnet tool install --global Aspire.Cli --version 13.5.3
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - name: Validate runner inputs without cloud access
+        run: bun -e 'const { acceptanceArguments } = await import("./scripts/cloud-acceptance.ts"); acceptanceArguments(["--app-name", process.env.APP_NAME, "--workspace", process.env.CLOUD_WORKSPACE, "--stage", "staging", "--template", "pending.nupkg"]);'
+      - name: Build the packed template
+        run: bun run prepare:local
+      - name: Runner safety and smoke contracts
+        run: bun test ./scripts/cloud-acceptance.test.ts
+      - name: Deploy generated staging app and verify retained data
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          version=$(bun -e 'console.log((await Bun.file("version.json").json()).version)')
+          bun scripts/accept-cloud.ts --app-name "$APP_NAME" --workspace "$CLOUD_WORKSPACE" --stage staging --template "artifacts/templates/Flarestack.Templates.${version}.nupkg"
+      - name: Retain controlled transcript only
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cloud-acceptance-transcript-${{ github.run_id }}
+          path: ${{ runner.temp }}/flarestack-cloud-acceptance/transcript.jsonl
+          if-no-files-found: ignore
+          retention-days: 14
+      # Deliberately no destroy step: the exact target must be reviewed and separately removed.

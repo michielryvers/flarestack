@@ -57,6 +57,7 @@ try {
     // Only clear our local-preview packages in this repository's private cache.
     await rm(resolve(root, ".packages/nuget", name.toLowerCase(), version), { recursive: true, force: true });
   }
+  await copyFile(resolve(root, "LICENSE"), resolve(root, "src/alchemy/LICENSE"));
   await run(["bun", "pm", "pack", "--filename", resolve(root, `artifacts/npm/flarestack-alchemy-${version}.tgz`), "--ignore-scripts"], resolve(root, "src/alchemy"));
   // Bun's --no-cache skips manifest caches, but can still reuse a locked local
   // tarball. Give every distinct archive a distinct path to invalidate it reliably.

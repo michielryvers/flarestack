@@ -9,12 +9,13 @@ const workspaces=process.env.FLARESTACK_ACCEPTANCE_ROOT??join(homedir(),".cache/
 await mkdir(workspaces,{recursive:true});
 const directory=await mkdtemp(join(workspaces,"run-"));
 await mkdir(join(directory,"tmp"));
-const app=join(directory,"app");
+const app=join(directory,"application with spaces");
 const mode=process.env.FLARESTACK_TEST_MODE==="Container"?"Container":"Fast";
+const appName=process.env.FLARESTACK_ACCEPTANCE_APP_NAME??`Acceptance.${mode}Notes`;
 const base=Number(process.env.FLARESTACK_ACCEPTANCE_PORT??9200);
 const endpoint=`http://127.0.0.1:${base+9}`;
 const logs=new LocalLogs(endpoint);
-const env={...process.env,TMPDIR:join(directory,"tmp"),DOTNET_CLI_HOME:join(directory,"dotnet-home"),BUN_INSTALL_CACHE_DIR:join(directory,"bun-cache"),Flarestack__LocalMode:mode,FLARESTACK_TEST_MODE:mode,FLARESTACK_DASHBOARD_URL:`http://127.0.0.1:${base+4}`};
+const env={...process.env,TMPDIR:join(directory,"tmp"),TEMP:join(directory,"tmp"),TMP:join(directory,"tmp"),DOTNET_CLI_HOME:join(directory,"dotnet-home"),BUN_INSTALL_CACHE_DIR:join(directory,"bun-cache"),Flarestack__LocalMode:mode,FLARESTACK_TEST_MODE:mode,FLARESTACK_TEST_ADMIN:"1",FLARESTACK_DASHBOARD_URL:`http://127.0.0.1:${base+4}`};
 const archive=join(root,`artifacts/templates/Flarestack.Templates.${version}.nupkg`);
 const old=process.env.FLARESTACK_UPGRADE_FROM;
 let dashboard:Bun.Subprocess|undefined;
@@ -27,9 +28,9 @@ async function install(path:string){
  const remove=Bun.spawn(["dotnet","new","uninstall","Flarestack.Templates"],{cwd:directory,env,stdout:"ignore",stderr:"ignore"});await remove.exited;
  await run(["dotnet","new","install",path],directory);
 }
-async function start(){await run(["aspire","start","--non-interactive","--format","Json"],app,true);await run(["aspire","wait",mode==="Container"?"cloudflare":"app","--timeout","300","--non-interactive"]);}
+async function start(){await run(mode==="Container"?["bun","run","dev:container","--background","--non-interactive","--format","Json"]:["aspire","start","--non-interactive","--format","Json"],app,true);await run(["aspire","wait",mode==="Container"?"cloudflare":"app","--timeout","300","--non-interactive"]);}
 async function stop(){await run(["aspire","stop","--non-interactive"],app,true);}
-async function verify(){await run(["bunx","playwright","test","todo.spec.ts","accounts.spec.ts"]);await run(["bun","run","verify:telemetry"]);}
+async function verify(administration=false){await run(["bunx","playwright","test","todo.spec.ts","accounts.spec.ts",...(administration?["admin.spec.ts"]:[])]);await run(["bun","run","verify:telemetry"]);}
 async function databaseSnapshot(){
  const path=join(app,"infra/.alchemy/local/d1/cloudflare-runtime-D1DatabaseObject");
  for(const name of await readdir(path))if(name.endsWith(".sqlite")&&name!=="metadata.sqlite"){
@@ -45,13 +46,16 @@ try {
  dashboard=Bun.spawn(["aspire","dashboard","run","--non-interactive","--allow-anonymous","--frontend-url",`http://127.0.0.1:${base+8}`,"--otlp-http-url",endpoint,"--otlp-grpc-url",`http://127.0.0.1:${base+10}`],{cwd:directory,env,stdout:"ignore",stderr:"ignore"});
  for(let i=0;i<60;i++){try{if((await fetch(`http://127.0.0.1:${base+8}`)).ok)break;}catch{}if(i===59)throw new Error("Acceptance log collector did not start");await Bun.sleep(500);}
  await install(old?resolve(old):archive);
- await run(["dotnet","new","flarestack-blazor","-n","AcceptanceApp","-o",app],directory);
+ await run(["dotnet","new","flarestack-blazor","-n",appName,"-o",app],directory);
  await run(["dotnet","restore"]);await run(["bun","install","--frozen-lockfile"]);
+ await run(["dotnet","build","--no-restore"]);
+ await run(["bun","run","check"]);
+ await run(["bunx","playwright","install","chromium"]);
  await run(["bun","run","configure:local","--port",String(base)]);await run(["bun","run","doctor"]);
- await start();await verify();await stop();
+ await start();await verify(true);await stop();
  const before=await databaseSnapshot();
  if(old){
-  await install(archive);const next=join(directory,"upgrade");await run(["dotnet","new","flarestack-blazor","-n","AcceptanceApp","-o",next],directory);
+  await install(archive);const next=join(directory,"upgrade");await run(["dotnet","new","flarestack-blazor","-n",appName,"-o",next],directory);
   // Only this disposable test app is overwritten; its data and machine settings survive.
   await cp(next,app,{recursive:true});
   await run(["dotnet","restore"]);await run(["bun","install","--frozen-lockfile"]);
