@@ -62,7 +62,10 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
  }).toBe(true);
  expect((await fetch(inbox + "/messages", {headers:{origin:"https://evil.example"}})).status).toBe(403);
  expect((await page.request.post("/v1/email", {data:{to:"evil@example.com",subject:"No",text:"No"}})).status()).not.toBe(202);
- await page.goto("/todos");
+ // Preserve both authenticated contexts while removing old Blazor circuits whose
+ // reconnect handler reloads the page and can race navigation after a restart.
+ await page.goto("about:blank");
+ await second.goto("about:blank");
  // Restart only this stack's application container, never unrelated containers.
  if (process.env.FLARESTACK_TEST_MODE !== "Container") {
    await runAspire(["resource", "todo", "restart", "--non-interactive"]);
@@ -74,8 +77,8 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
    await exec("docker", ["restart", apps[0]!.split(" ")[0]!]);
    await expect.poll(async () => { try { return (await fetch(origin + "/health")).status; } catch { return 0; } }).toBe(200);
  }
- await second.reload(); await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
- await page.reload(); await expect(page.getByText("Keep this task private",{exact:true})).toBeVisible();
+ await second.goto("/todos"); await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
+ await page.goto("/todos"); await expect(page.getByText("Keep this task private",{exact:true})).toBeVisible();
  await expect(page.getByText("Bob's task",{exact:true})).toHaveCount(0);
  await page.getByRole("button",{name:"Delete Keep this task private",exact:true}).click();
  await expect(page.getByText("Keep this task private",{exact:true})).toHaveCount(0);

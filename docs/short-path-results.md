@@ -180,7 +180,8 @@ No remote state was deleted.
 | --- | --- |
 | Earlier cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
 | Locked cloud runtime validation | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
-| Final guarded template | `bd04f71fb2387e14c16c22548423b316ac90316ecf67fc04a9b9e1d4453fbbd8` |
+| Cloud-validated guarded template | `bd04f71fb2387e14c16c22548423b316ac90316ecf67fc04a9b9e1d4453fbbd8` |
+| Final template, restart-test correction only | `70df5f6f16d3bcfda6a66645fd700fbfae8fdeaa66fd1c7aec123517410d56de` |
 
 The final template changes browser-test helpers, their documented Node.js
 prerequisite, package repository metadata, and lockfile generation relative to the
@@ -219,6 +220,16 @@ are unchanged. Email/admin settings, infrastructure, migrations and original
 browser acceptance evidence were preserved. Recursive template and sanitized-log
 scans found no secrets. No live destructive negative test was attempted; those
 cases use controlled providers. No additional email or stage was created.
+
+The final template differs from that cloud-validated archive in exactly one
+content file: the Todo browser test. It navigates both existing authenticated
+pages away before restarting the app, preventing Blazor's reconnect auto-reload
+from competing with the test's navigation. It then verifies the same private rows
+with the original browser contexts and cookies. No retries or longer timeout were
+added. The five runtime archives, lockfile, infrastructure and remaining template
+content are byte-identical. The corrected live Node test passed in 26.9 seconds,
+followed by complete Aspire telemetry verification; trace
+`1a910a523a19096c6a9db62b6eba374f` remains in the running local dashboard.
 
 Four isolated library packages also produced matching portable-PDB symbol
 archives. The SDK-based release verifier checked assembly/PDB identities and
