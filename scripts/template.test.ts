@@ -50,6 +50,14 @@ test.each([
     expect(await Bun.file(join(directory, config.appHost.path)).exists()).toBe(true);
     const manifest = await Bun.file(join(directory, "package.json")).json();
     expect(manifest.name).toBe(`app-${slug}`);
+    const sourceLock = Bun.JSON5.parse(await readFile(join(root, "bun.lock"), "utf8")) as { packages: Record<string, unknown[]> };
+    const generatedLock = Bun.JSON5.parse(await readFile(join(directory, "bun.lock"), "utf8")) as { packages: Record<string, unknown[]>; workspaces: Record<string, { name: string }> };
+    expect(generatedLock.workspaces[""].name).toBe(manifest.name);
+    const reviewedPackages = new Set(Object.values(sourceLock.packages).map(record => JSON.stringify(record)));
+    for (const [name, record] of Object.entries(generatedLock.packages)) {
+      if (name === "@flarestack/alchemy") continue;
+      expect(reviewedPackages.has(JSON.stringify(record)), `Registry resolution ${name} must come from the reviewed root bun.lock`).toBe(true);
+    }
     expect(manifest.scripts["migrate:local-state"]).toBe("bun node_modules/@flarestack/alchemy/local/migrate-state.ts local.json");
     expect(manifest.scripts["dev:container"]).toBe("bun scripts/local-mode.ts container");
     const infraManifest = await Bun.file(join(directory, "infra/package.json")).json();

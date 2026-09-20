@@ -176,12 +176,17 @@ No remote state was deleted.
 | Template artifact | SHA-256 |
 | --- | --- |
 | Final cloud refresh | `8107163c056a878c3b0921a93aa06bdffb09a0f3426c0382c926d5753278a3d7` |
-| Final local template | `ddd4f341444c61c34537047011e74b2a1058648f2a95d65f44c0209f33b63a9d` |
+| Final local template | `53e29639788a2b10613d7435b7402cf97e549c83aee28ae80f410e38ee15c999` |
 
-The final template changes only browser-test helpers, their documented Node.js
-prerequisite, and package repository metadata relative to the cloud refresh.
+The final template changes browser-test helpers, their documented Node.js
+prerequisite, package repository metadata, and lockfile generation relative to the
+earlier cloud refresh. Its registry resolutions come from the reviewed root lock;
+repeat staging is byte-identical, and a clean external frozen install/typecheck
+passed without changing that lock. The generated workspace name matches the app.
 All five embedded runtime packages and application/infrastructure sources are
-byte-identical. Both template cases passed with 90 assertions; three live
+byte-identical, but one nested logging dependency changes to the root-reviewed
+OpenTelemetry API 1.9.1. A same-stage refresh of this exact final archive is being
+validated separately. Both template cases passed with 830 assertions; three live
 Playwright Node cases and full Aspire telemetry verification passed locally.
 
 The original Todo app is restored in Fast mode, with saved administrator

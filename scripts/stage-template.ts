@@ -101,6 +101,11 @@ for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Em
 }
 await mkdir(resolve(output, "artifacts/npm"), { recursive: true });
 await cp(resolve(root, "artifacts/npm", npmArchive), resolve(output, "artifacts/npm", npmArchive));
+// Reuse reviewed transitive resolutions; only reconcile the generated workspace
+// and local package archive instead of resolving registry ranges from scratch.
+const seededLock = Bun.JSON5.parse(await readFile(resolve(root, "bun.lock"), "utf8")) as { workspaces: Record<string, { name: string }> };
+seededLock.workspaces[""].name = infra.name;
+await emit("bun.lock", JSON.stringify(seededLock, null, 2) + "\n");
 const lock = Bun.spawn(["bun", "install", "--lockfile-only"], { cwd: output, stdout: "inherit", stderr: "inherit" });
 if (await lock.exited !== 0) throw new Error("Template lockfile resolution failed");
 console.log("Staged standalone template with local packages.");
