@@ -62,12 +62,21 @@ public class CoreTests
     [InlineData(true)]
     public async Task SqlTracingIsOptInAndExcludesBoundParameters(bool enabled)
     {
+        using var parent = new Activity(nameof(SqlTracingIsOptInAndExcludesBoundParameters))
+            .SetIdFormat(ActivityIdFormat.W3C)
+            .Start();
         var spans = new List<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Flarestack.D1",
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = spans.Add
+            ActivityStopped = activity =>
+            {
+                if (activity.TraceId == parent.TraceId && activity.ParentSpanId == parent.SpanId)
+                {
+                    spans.Add(activity);
+                }
+            }
         };
         ActivitySource.AddActivityListener(listener);
         var handler = new RecordingHandler("{\"ok\":true,\"rows\":[]}");

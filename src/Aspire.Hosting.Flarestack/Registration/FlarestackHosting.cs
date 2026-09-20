@@ -55,7 +55,7 @@ public static class FlarestackHosting
         var platform = FlarestackResourceComposition.AddPlatform(builder, name, infrastructureDirectory, mode);
         builder.Eventing.Subscribe<BeforeStartEvent>((@event, cancellationToken) =>
         {
-            if (mode == FlarestackLocalMode.Fast && !platform.Resource.IsApplicationAttached)
+            if (builder.ExecutionContext.IsRunMode && mode == FlarestackLocalMode.Fast && !platform.Resource.IsApplicationAttached)
             {
                 throw new InvalidOperationException("Fast-mode Flarestack requires WithApplication before startup.");
             }

@@ -3,9 +3,13 @@
 ## .NET application
 
 ```csharp
-builder.Services.AddFlarestackD1(builder.Configuration);
-builder.Services.AddFlarestackEmail(builder.Configuration);
-builder.Services.AddFlarestackAuthentication(builder.Configuration);
+using Flarestack.Authentication;
+using Flarestack.D1;
+using Flarestack.Email;
+
+builder.AddFlarestackD1();
+builder.AddFlarestackEmail();
+builder.AddFlarestackAuthentication();
 // After building the app and configuring authentication/authorization middleware:
 app.MapFlarestackAccountEndpoints(options => options.DefaultReturnPath = "/todos");
 ```
@@ -47,7 +51,7 @@ The overload with a callback binds `EmailOptions.SectionName` (`Flarestack:Email
 then applies caller overrides:
 
 ```csharp
-builder.Services.AddFlarestackEmail(builder.Configuration, options =>
+builder.AddFlarestackEmail(options =>
 {
     options.Timeout = TimeSpan.FromSeconds(15);
 });
@@ -55,8 +59,7 @@ builder.Services.AddFlarestackEmail(builder.Configuration, options =>
 
 `EmailOptions.BaseAddress` defaults to `http://email.internal`; `Timeout` defaults
 to 30 seconds. Configuration uses a TimeSpan string, for example
-`"Flarestack": { "Email": { "Timeout": "00:00:15" } }`. Pass `static _ => { }`
-as the callback to use this overload with configuration alone.
+`"Flarestack": { "Email": { "Timeout": "00:00:15" } }`. Omit the callback to use configuration alone.
 
 This overload validates options at host startup, or on first options access if
 earlier, including later `Configure<EmailOptions>` and `PostConfigure<EmailOptions>`
@@ -77,12 +80,12 @@ bind their configuration sections before caller overrides and validate final
 options at startup. The existing two-argument overloads remain available.
 
 ```csharp
-builder.Services.AddFlarestackD1(builder.Configuration, options =>
+builder.AddFlarestackD1(options =>
 {
     options.TimeoutSeconds = 15;
     options.MaxCommands = 50;
 });
-builder.Services.AddFlarestackAuthentication(builder.Configuration, options =>
+builder.AddFlarestackAuthentication(options =>
 {
     options.ClientId = "my-app";
 });
@@ -90,26 +93,29 @@ builder.Services.AddFlarestackAuthentication(builder.Configuration, options =>
 
 See [D1 configuration](d1-configuration.md) and
 [Authentication configuration](authentication-configuration.md) for defaults,
-validation, and security constraints. The Todo sample uses the callback overloads
-with empty callbacks to enable startup validation using configuration alone.
+validation, and security constraints. The Todo sample uses builder registration without callbacks; startup validation
+is enabled in both forms.
 
 ## Aspire and infrastructure
 
 ```csharp
-FlarestackLocal.Configure("../infra"); // Apply optional machine dashboard ports.
+using Aspire.Hosting.Flarestack;
+
 var builder = DistributedApplication.CreateBuilder(args);
-var platform = builder.AddFlarestackPlatform("cloudflare", "../infra", FlarestackLocalMode.Fast)
-    .WithApplication("app");
+var platform = builder.AddFlarestack("cloudflare", "../infra");
 builder.Build().Run();
 ```
 
 The infrastructure `package.json` declares `flarestack.configuration`, `release`,
-`protocol` and `flarestack:dev`/`flarestack:watch` scripts. Hosting discovers and
+`protocol` and `flarestack:dev`/`flarestack:watch`/`flarestack:deploy` scripts. Hosting discovers and
 launches those single executable commands directly, preserving Aspire signal
 ownership. Compound shell scripts are rejected. Consumers do not pass npm runtime
 paths to the hosting API. The typed platform supports standard Aspire endpoint and
 environment extensions. See [Aspire hosting](aspire-hosting.md) for attachment and
-mode semantics. The existing `AddFlarestack` overload and its `FlarestackResources`
+mode semantics. Set `Flarestack:ApplicationName` to name the Fast application
+resource (default: platform name plus `-app`). `Flarestack:LocalMode` defaults to
+Fast. Machine ports configure the builder, without global environment mutation.
+The existing typed and compatibility APIs and the `FlarestackResources`
 result remain supported. Do not add a second app process in
 Container mode; Fast mode keeps the tested .NET watcher rather than duplicating it
 with a separate `AddProject` resource.

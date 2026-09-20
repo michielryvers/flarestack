@@ -3,14 +3,14 @@
 The options overload binds `Flarestack:D1`, applies the supplied callback, and validates the final options at host startup (or first options/client access):
 
 ```csharp
-builder.Services.AddFlarestackD1(builder.Configuration, options =>
+builder.AddFlarestackD1(options =>
 {
     options.TimeoutSeconds = 15;
     options.MaxCommands = 50;
 });
 ```
 
-Pass `_ => { }` to use bound configuration without callback overrides. Later `Configure<D1Options>` registrations and `PostConfigure<D1Options>` run before validation. The HTTP client and database receive the same validated options instance, including request size, batch command count, and SQL trace settings. These settings are captured through `IOptions<D1Options>`; configuration reload is not a live client reconfiguration mechanism.
+Use `builder.AddFlarestackD1()` for bound configuration without overrides. Import `Flarestack.D1`. Later `Configure<D1Options>` registrations and `PostConfigure<D1Options>` run before validation. The HTTP client and database receive the same validated options instance, including request size, batch command count, and SQL trace settings. These settings are captured through `IOptions<D1Options>`; configuration reload is not a live client reconfiguration mechanism.
 
 | Property | Default | Validation |
 | --- | --- | --- |

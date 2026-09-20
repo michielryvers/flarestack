@@ -4,6 +4,7 @@ Flarestack.Email.EmailDeliveryException
 Flarestack.Email.EmailDeliveryException.EmailDeliveryException() -> void
 Flarestack.Email.EmailDeliveryState
 Flarestack.Email.EmailDeliveryState.Accepted = 0 -> Flarestack.Email.EmailDeliveryState
+Flarestack.Email.EmailHostApplicationBuilderExtensions
 Flarestack.Email.EmailMessage
 Flarestack.Email.EmailMessage.<Clone>$() -> Flarestack.Email.EmailMessage!
 Flarestack.Email.EmailMessage.Deconstruct(out string! To, out string! Subject, out string! Text) -> void
@@ -42,6 +43,7 @@ override Flarestack.Email.EmailMessage.ToString() -> string!
 override Flarestack.Email.EmailSendResult.Equals(object? obj) -> bool
 override Flarestack.Email.EmailSendResult.GetHashCode() -> int
 override Flarestack.Email.EmailSendResult.ToString() -> string!
+static Flarestack.Email.EmailHostApplicationBuilderExtensions.AddFlarestackEmail<TBuilder>(this TBuilder builder, System.Action<Flarestack.Email.EmailOptions!>? configure = null) -> TBuilder
 static Flarestack.Email.EmailMessage.operator !=(Flarestack.Email.EmailMessage? left, Flarestack.Email.EmailMessage? right) -> bool
 static Flarestack.Email.EmailMessage.operator ==(Flarestack.Email.EmailMessage? left, Flarestack.Email.EmailMessage? right) -> bool
 static Flarestack.Email.EmailRegistration.AddFlarestackEmail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

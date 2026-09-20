@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Flarestack.Configuration;
+using Aspire.Hosting.Flarestack.Deployment;
 using Aspire.Hosting.Flarestack.Infrastructure;
 using Aspire.Hosting.Flarestack.Resources;
 
@@ -16,6 +17,14 @@ internal static class FlarestackResourceComposition
     {
         var infrastructurePath = Path.GetFullPath(infrastructureDirectory, builder.AppHostDirectory);
         var manifest = FlarestackInfrastructureManifest.Read(infrastructurePath);
+        if (builder.ExecutionContext.IsPublishMode)
+        {
+            var deploymentResource = new FlarestackPlatformResource(name, infrastructurePath, mode, manifest, null, null, builder);
+            var deployment = builder.AddResource(deploymentResource).ExcludeFromManifest();
+            FlarestackDeploymentPipeline.Configure(deployment);
+            return deployment;
+        }
+
         var settings = FlarestackLocalSettings.Read(manifest.ConfigurationPath, infrastructurePath);
         var token = builder.AddParameter(
             $"{name}-bridge-token",
@@ -47,17 +56,19 @@ internal static class FlarestackResourceComposition
     internal static void AttachApplication(IResourceBuilder<FlarestackPlatformResource> platform, string name)
     {
         var resource = platform.Resource;
-        if (resource.Mode == FlarestackLocalMode.Fast)
+        if (resource.Mode == FlarestackLocalMode.Fast && platform.ApplicationBuilder.ExecutionContext.IsRunMode)
         {
+            var settings = resource.Settings ?? throw new InvalidOperationException("Local Flarestack settings are missing.");
+            var bridgeToken = resource.BridgeToken ?? throw new InvalidOperationException("Local Flarestack bridge parameter is missing.");
             var application = platform.ApplicationBuilder.AddExecutable(
                     name, resource.Manifest.WatchCommand[0], resource.WorkingDirectory, resource.Manifest.WatchCommand[1..])
                 .WithHttpEndpoint(name: "http", isProxied: false)
                 .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-                .WithEnvironment("Flarestack__Authentication__Authority", resource.Settings.PublicOrigin + "/auth")
+                .WithEnvironment("Flarestack__Authentication__Authority", settings.PublicOrigin + "/auth")
                 .WithEnvironment("Flarestack__D1__BaseAddress", platform.GetEndpoint("bridge"))
                 .WithEnvironment("Flarestack__Email__BaseAddress", platform.GetEndpoint("bridge"))
                 .WithEnvironment("Flarestack__Authentication__BackchannelBaseAddress", platform.GetEndpoint("bridge"))
-                .WithEnvironment("Flarestack__LocalBridgeToken", resource.BridgeToken)
+                .WithEnvironment("Flarestack__LocalBridgeToken", bridgeToken)
                 .WithOtlpExporter(OtlpProtocol.HttpProtobuf)
                 .WithHttpHealthCheck("/health")
                 .WaitFor(platform);
