@@ -2,6 +2,9 @@
 
 The first preview was deployed on 2026-09-20 at
 <https://flarestack-preview.proeftu.in>, stage `preview-20260920-a1`.
+It was destroyed on 2026-09-20 at the user's request. The preview Workers,
+container application, D1 database, auth secret and custom-domain attachment
+were removed; local development and the existing email-domain setup were retained.
 Cloudflare owns the running container, D1 and private Auth/Email Workers;
 Alchemy owns provisioning. The preview is capped at one `lite` container instance.
 Use a uniquely named `preview-<timestamp>-<suffix>` stage for another disposable
@@ -15,6 +18,8 @@ aspire stop --non-interactive
 bun run prepare:local
 bun run plan:cloud
 bun run deploy:cloud
+# Permanently remove this preview stage, including its D1 data:
+bun run destroy:cloud
 ```
 
 The non-secret stage, HTTPS origin and sender live in `samples/Todo/cloud.json`.
@@ -23,6 +28,9 @@ the infrastructure project's installed Alchemy CLI. Resolving the repository's
 separate CLI copy caused an Effect secret-registry error; the runner avoids that
 duplicate runtime. Use the existing authenticated Alchemy profile. Local deployment
 logs export to a temporary Aspire receiver at port 18889.
+If those collector ports are occupied, override `FLARESTACK_DEPLOY_DASHBOARD_URL`,
+`FLARESTACK_DEPLOY_OTLP_ENDPOINT` and `FLARESTACK_DEPLOY_OTLP_GRPC_ENDPOINT` with
+free loopback addresses.
 
 The cloud entrypoint uses Production mode, a canonical custom domain and private
 bindings. Native Cloudflare Worker/container logs are enabled. Cloud OTLP export

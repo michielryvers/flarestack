@@ -21,7 +21,8 @@
     "check:versions": "bun scripts/check-versions.ts",
     "smoke:cloud": "bun scripts/smoke-cloud.ts",
     "plan:cloud": "bun scripts/deploy-cloud.ts plan",
-    "deploy:cloud": "bun scripts/deploy-cloud.ts deploy"
+    "deploy:cloud": "bun scripts/deploy-cloud.ts deploy",
+    "destroy:cloud": "bun scripts/deploy-cloud.ts destroy"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",
