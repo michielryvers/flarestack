@@ -1,140 +1,189 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Flarestack.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Flarestack.D1;
 
-public interface ID1Database
-{
-    Task<IReadOnlyList<T>> QueryAsync<T>(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default);
-    Task<T?> QuerySingleOrDefaultAsync<T>(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default);
-    Task<int> ExecuteAsync(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<D1CommandResult>> BatchAsync(IReadOnlyList<D1Command> commands, CancellationToken cancellationToken = default);
-}
-public enum D1CommandKind { Execute, Query }
-public sealed record D1Command(string Sql, IReadOnlyList<object?> Parameters, D1CommandKind Kind = D1CommandKind.Execute);
-public sealed record D1CommandResult(int RowsAffected, IReadOnlyList<JsonElement>? Rows = null);
-public sealed class D1CardinalityException() : Exception("Expected at most one D1 row.");
-public sealed class D1Exception(string code, string operation, string correlationId)
-    : Exception($"D1 {operation} failed ({code}, correlation {correlationId}).")
-{
-    public string Code { get; } = code;
-    public string Operation { get; } = operation;
-    public string CorrelationId { get; } = correlationId;
-}
-public sealed class D1Options
-{
-    public string BaseAddress { get; set; } = "http://d1.internal";
-    public int TimeoutSeconds { get; set; } = 30;
-    public int MaxRequestBytes { get; set; } = 1_048_576;
-    public int MaxCommands { get; set; } = 100;
-    public bool IncludeSqlInTraces { get; set; }
-}
-public static class D1Registration
-{
-    public static IServiceCollection AddFlarestackD1(this IServiceCollection services, IConfiguration configuration)
-    {
-        var options = configuration.GetSection("Flarestack:D1").Get<D1Options>() ?? new();
-        if (!Uri.TryCreate(options.BaseAddress, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || options.TimeoutSeconds <= 0 || options.MaxCommands <= 0 || options.MaxRequestBytes <= 0)
-            throw new InvalidOperationException("Invalid Flarestack:D1 configuration.");
-        var bridgeToken = configuration["Flarestack:LocalBridgeToken"];
-        if (!string.IsNullOrEmpty(bridgeToken) && !uri.IsLoopback) throw new InvalidOperationException("Local bridge credentials require a loopback D1 address.");
-        services.AddSingleton(options);
-        services.AddHttpClient<ID1Database, D1Database>(client => { Flarestack.Internal.Protocol.Configure(client); client.BaseAddress = uri; client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds); if (!string.IsNullOrEmpty(bridgeToken)) client.DefaultRequestHeaders.Add("x-flarestack-bridge", bridgeToken); });
-        return services;
-    }
-}
+/// <summary>Submits queries and commands to the private D1 binding without automatic retries.</summary>
 public sealed class D1Database(HttpClient client, D1Options options, ILogger<D1Database> logger) : ID1Database
 {
+    private const long MaximumSafeInteger = 9_007_199_254_740_991;
+    private const int MaximumSqlLength = 100_000;
+    private const int MaximumParameterCount = 100;
+    private const int MaximumTraceSqlLength = 16_384;
+
     public static readonly ActivitySource ActivitySource = new("Flarestack.D1");
-    private static readonly JsonSerializerOptions Rows = new(JsonSerializerDefaults.Web)
+
+    private static readonly JsonSerializerOptions RowSerializerOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         Converters = { new SqliteBooleanConverter() }
     };
+
+    /// <summary>Converts a supported .NET value to the D1 wire representation.</summary>
     public static object? ConvertParameter(object? value) => value switch
     {
         null or string or byte or sbyte or short or ushort or int or uint => value,
-        long n when n is >= -9007199254740991 and <= 9007199254740991 => n,
-        ulong n when n <= 9007199254740991 => n,
-        float n when float.IsFinite(n) => n,
-        double n when double.IsFinite(n) => n,
-        bool b => b ? 1 : 0,
-        Guid g => g.ToString("D"),
-        DateTime d when d.Kind != DateTimeKind.Unspecified => d.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-        DateTimeOffset d => d.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-        byte[] b => new { type = "base64", value = Convert.ToBase64String(b) },
-        _ => throw new ArgumentException($"Unsupported D1 parameter: {value.GetType().Name}. Dates must have a timezone and integers must be JavaScript-safe.")
+        long number when number is >= -MaximumSafeInteger and <= MaximumSafeInteger => number,
+        ulong number when number <= MaximumSafeInteger => number,
+        float number when float.IsFinite(number) => number,
+        double number when double.IsFinite(number) => number,
+        bool boolean => boolean ? 1 : 0,
+        Guid guid => guid.ToString("D"),
+        DateTime date when date.Kind != DateTimeKind.Unspecified => date.ToUniversalTime()
+            .ToString("O", CultureInfo.InvariantCulture),
+        DateTimeOffset date => date.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+        byte[] bytes => new { type = "base64", value = Convert.ToBase64String(bytes) },
+        _ => throw new ArgumentException(
+            $"Unsupported D1 parameter: {value.GetType().Name}. Dates must have a timezone and integers must be JavaScript-safe.")
     };
-    private static object Command(string sql, IReadOnlyList<object?>? parameters, string operation)
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<T>> QueryAsync<T>(
+        string sql,
+        IReadOnlyList<object?>? parameters = null,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(sql) || sql.Length > 100_000) throw new ArgumentException("D1 SQL must contain 1–100000 characters.");
-        if (parameters?.Count > 100) throw new ArgumentException("D1 supports at most 100 parameters per command.");
-        return new { operation, sql, parameters = parameters?.Select(ConvertParameter).ToArray() ?? [] };
+        using var document = await SendAsync("query", CreateCommand(sql, parameters, "query"), cancellationToken);
+        return document.RootElement.GetProperty("rows").Deserialize<List<T>>(RowSerializerOptions) ?? [];
     }
-    public async Task<IReadOnlyList<T>> QueryAsync<T>(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default)
-    {
-        using var document = await SendAsync("query", Command(sql, parameters, "query"), cancellationToken);
-        return document.RootElement.GetProperty("rows").Deserialize<List<T>>(Rows) ?? [];
-    }
-    public async Task<T?> QuerySingleOrDefaultAsync<T>(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default)
+
+    /// <inheritdoc />
+    public async Task<T?> QuerySingleOrDefaultAsync<T>(
+        string sql,
+        IReadOnlyList<object?>? parameters = null,
+        CancellationToken cancellationToken = default)
     {
         var rows = await QueryAsync<T>(sql, parameters, cancellationToken);
-        return rows.Count switch { 0 => default, 1 => rows[0], _ => throw new D1CardinalityException() };
+
+        return rows.Count switch
+        {
+            0 => default,
+            1 => rows[0],
+            _ => throw new D1CardinalityException()
+        };
     }
-    public async Task<int> ExecuteAsync(string sql, IReadOnlyList<object?>? parameters = null, CancellationToken cancellationToken = default)
+
+    /// <inheritdoc />
+    public async Task<int> ExecuteAsync(
+        string sql,
+        IReadOnlyList<object?>? parameters = null,
+        CancellationToken cancellationToken = default)
     {
-        using var document = await SendAsync("execute", Command(sql, parameters, "execute"), cancellationToken);
+        using var document = await SendAsync("execute", CreateCommand(sql, parameters, "execute"), cancellationToken);
         return document.RootElement.GetProperty("rowsAffected").GetInt32();
     }
-    public async Task<IReadOnlyList<D1CommandResult>> BatchAsync(IReadOnlyList<D1Command> commands, CancellationToken cancellationToken = default)
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<D1CommandResult>> BatchAsync(
+        IReadOnlyList<D1Command> commands,
+        CancellationToken cancellationToken = default)
     {
-        if (commands.Count == 0 || commands.Count > options.MaxCommands) throw new ArgumentException("Invalid D1 batch command count.");
-        using var document = await SendAsync("batch", new { commands = commands.Select(c => Command(c.Sql, c.Parameters, c.Kind == D1CommandKind.Query ? "query" : "execute")) }, cancellationToken);
-        return document.RootElement.GetProperty("results").Deserialize<List<D1CommandResult>>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
+        if (commands.Count == 0 || commands.Count > options.MaxCommands)
+        {
+            throw new ArgumentException("Invalid D1 batch command count.");
+        }
+
+        using var document = await SendAsync("batch",
+            new
+            {
+                commands = commands.Select(command => CreateCommand(
+                    command.Sql,
+                    command.Parameters,
+                    command.Kind == D1CommandKind.Query ? "query" : "execute"))
+            }, cancellationToken);
+
+        return document.RootElement.GetProperty("results")
+            .Deserialize<List<D1CommandResult>>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
     }
-    private async Task<JsonDocument> SendAsync(string operation, object command, CancellationToken ct)
+
+    private static object CreateCommand(string sql, IReadOnlyList<object?>? parameters, string operation)
+    {
+        if (string.IsNullOrWhiteSpace(sql) || sql.Length > MaximumSqlLength)
+        {
+            throw new ArgumentException("D1 SQL must contain 1–100000 characters.");
+        }
+
+        if (parameters?.Count > MaximumParameterCount)
+        {
+            throw new ArgumentException("D1 supports at most 100 parameters per command.");
+        }
+
+        return new { operation, sql, parameters = parameters?.Select(ConvertParameter).ToArray() ?? [] };
+    }
+
+    private async Task<JsonDocument> SendAsync(
+        string operation,
+        object command,
+        CancellationToken cancellationToken)
     {
         using var activity = ActivitySource.StartActivity($"D1 {operation}", ActivityKind.Client);
         activity?.SetTag("db.system.name", "sqlite").SetTag("db.operation.name", operation);
-        var fields = JsonSerializer.SerializeToElement(command);
+
+        var commandFields = JsonSerializer.SerializeToElement(command);
+        SetSqlTraceTag(activity, operation, commandFields);
+
+        var payload = commandFields.EnumerateObject()
+            .ToDictionary(property => property.Name, property => (object?)property.Value);
+        payload["protocolVersion"] = 2;
+        payload["operation"] = operation;
+
+        var requestBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+
+        if (requestBytes.Length > options.MaxRequestBytes)
+        {
+            throw new ArgumentException("D1 request exceeds configured size limit.");
+        }
+
+        using var content = new ByteArrayContent(requestBytes);
+        content.Headers.ContentType = new("application/json");
+
+        using var response = await client.PostAsync("/v1/commands", content, cancellationToken);
+        Protocol.Ensure(response, "Flarestack.D1");
+
+        var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var document = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
+
+        if (!response.IsSuccessStatusCode || !document.RootElement.GetProperty("ok").GetBoolean())
+        {
+            var correlationId = document.RootElement.GetProperty("correlationId").GetString() ?? "unknown";
+            var code = document.RootElement.GetProperty("error").GetProperty("code").GetString() ?? "D1_FAILURE";
+            document.Dispose();
+
+            activity?.SetStatus(ActivityStatusCode.Error, code);
+            logger.LogError("D1 {Operation} failed: {Code}, correlation {CorrelationId}", operation, code, correlationId);
+            throw new D1Exception(code, operation, correlationId);
+        }
+
+        logger.LogInformation("D1 {Operation} completed", operation);
+        return document;
+    }
+
+    private void SetSqlTraceTag(Activity? activity, string operation, JsonElement commandFields)
+    {
         if (activity?.IsAllDataRequested == true && options.IncludeSqlInTraces)
         {
             // Capture statement text only. Bound parameter values never become span attributes.
             var sql = operation == "batch"
-                ? string.Join(";\n", fields.GetProperty("commands").EnumerateArray().Select(c => c.GetProperty("sql").GetString()))
-                : fields.GetProperty("sql").GetString()!;
-            const int maxSqlLength = 16_384;
-            activity.SetTag("db.query.text", sql.Length <= maxSqlLength ? sql : sql[..maxSqlLength] + " /* truncated */");
+                ? string.Join(";\n", commandFields.GetProperty("commands").EnumerateArray()
+                    .Select(command => command.GetProperty("sql").GetString()))
+                : commandFields.GetProperty("sql").GetString()!;
+
+            activity.SetTag("db.query.text", sql.Length <= MaximumTraceSqlLength
+                ? sql
+                : sql[..MaximumTraceSqlLength] + " /* truncated */");
         }
-        var payload = fields.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value);
-        payload["protocolVersion"] = 2; payload["operation"] = operation;
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
-        if (bytes.Length > options.MaxRequestBytes) throw new ArgumentException("D1 request exceeds configured size limit.");
-        using var content = new ByteArrayContent(bytes);
-        content.Headers.ContentType = new("application/json");
-        using var response = await client.PostAsync("/v1/commands", content, ct);
-        Flarestack.Internal.Protocol.Ensure(response, "Flarestack.D1");
-        var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-        if (!response.IsSuccessStatusCode || !document.RootElement.GetProperty("ok").GetBoolean())
-        {
-            var id = document.RootElement.GetProperty("correlationId").GetString() ?? "unknown";
-            var code = document.RootElement.GetProperty("error").GetProperty("code").GetString() ?? "D1_FAILURE";
-            document.Dispose(); activity?.SetStatus(ActivityStatusCode.Error, code);
-            logger.LogError("D1 {Operation} failed: {Code}, correlation {CorrelationId}", operation, code, id);
-            throw new D1Exception(code, operation, id);
-        }
-        logger.LogInformation("D1 {Operation} completed", operation);
-        return document;
     }
+
     private sealed class SqliteBooleanConverter : JsonConverter<bool>
     {
-        public override bool Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) => reader.TokenType == JsonTokenType.Number ? reader.GetInt32() != 0 : reader.GetBoolean();
-        public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) => writer.WriteBooleanValue(value);
+        public override bool Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.Number ? reader.GetInt32() != 0 : reader.GetBoolean();
+
+        public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) =>
+            writer.WriteBooleanValue(value);
     }
 }

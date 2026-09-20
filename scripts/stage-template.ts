@@ -8,6 +8,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 function transform(text: string) {
   return text.replaceAll("Todo.Web", "FlarestackTemplate.Web")
+    .replaceAll("Todo.Client", "FlarestackTemplate.Client")
     .replaceAll("Todo.ServiceDefaults", "FlarestackTemplate.ServiceDefaults")
     .replaceAll("Flarestack.AppHost", "FlarestackTemplate.AppHost")
     .replaceAll("flarestack.todo", "flarestack.TemplateSlug")
@@ -30,7 +31,7 @@ async function copyTree(from: string, to: string) {
     }
   }
 }
-for (const project of ["Todo.Web", "Todo.ServiceDefaults"]) await copyTree(`samples/Todo/${project}`, transform(project));
+for (const project of ["Todo.Web", "Todo.Client", "Todo.ServiceDefaults"]) await copyTree(`samples/Todo/${project}`, transform(project));
 await copyTree("Flarestack.AppHost", "FlarestackTemplate.AppHost");
 await copyTree("samples/Todo/migrations", "migrations");
 for (const file of ["alchemy.run.ts", "auth.ts", "config.ts", "worker.ts", "email.ts"]) {
@@ -43,15 +44,15 @@ for (const file of ["Directory.Build.props", "Directory.Packages.props", "global
 await emit("Dockerfile", transform(await readFile(resolve(root, "samples/Todo/Dockerfile"), "utf8")).replaceAll("samples/Todo/", ""));
 const local = JSON.parse(await readFile(resolve(root, "samples/Todo/local.json"), "utf8"));
 Object.assign(local, { stackName: "app-TemplateSlug", project: "FlarestackTemplate.Web/FlarestackTemplate.Web.csproj", buildRoot: ".", buildContext: ".alchemy/app-build", dockerfile: "Dockerfile",
-  buildSources: ["Directory.Build.props", "Directory.Packages.props", "global.json", "NuGet.Config", "artifacts/nuget", "FlarestackTemplate.Web", "FlarestackTemplate.ServiceDefaults", "Dockerfile"] });
+  buildSources: ["Directory.Build.props", "Directory.Packages.props", "global.json", "NuGet.Config", "artifacts/nuget", "FlarestackTemplate.Web", "FlarestackTemplate.Client", "FlarestackTemplate.ServiceDefaults", "Dockerfile"] });
 await emit("local.json", JSON.stringify(local, null, 2) + "\n");
 const host = transform(await readFile(resolve(root, "Flarestack.AppHost/AppHost.cs"), "utf8"))
   .replaceAll("../samples/Todo/infra", "../infra")
   .replaceAll("../samples/Todo/infra/node_modules", "../node_modules")
-  .replace('ApplicationName = "todo"', 'ApplicationName = "app"');
+  .replace('.WithApplication("todo")', '.WithApplication("app")');
 await emit("FlarestackTemplate.AppHost/AppHost.cs", host);
 await emit("aspire.config.json", JSON.stringify({ appHost: { path: "FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" } }, null, 2));
-await emit("FlarestackTemplate.slnx", '<Solution>\n  <Project Path="FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" />\n  <Project Path="FlarestackTemplate.Web/FlarestackTemplate.Web.csproj" />\n  <Project Path="FlarestackTemplate.ServiceDefaults/FlarestackTemplate.ServiceDefaults.csproj" />\n</Solution>\n');
+await emit("FlarestackTemplate.slnx", '<Solution>\n  <Project Path="FlarestackTemplate.AppHost/FlarestackTemplate.AppHost.csproj" />\n  <Project Path="FlarestackTemplate.Web/FlarestackTemplate.Web.csproj" />\n  <Project Path="FlarestackTemplate.Client/FlarestackTemplate.Client.csproj" />\n  <Project Path="FlarestackTemplate.ServiceDefaults/FlarestackTemplate.ServiceDefaults.csproj" />\n</Solution>\n');
 for (const file of ["todo.spec.ts", "accounts.ts", "local.ts", "accounts.spec.ts", "admin.spec.ts", "hot-reload.spec.ts", "verify-telemetry.ts"]) {
   const source = await readFile(resolve(root, "tests/e2e", file), "utf8");
   await emit(`tests/e2e/${file}`, transform(source)
@@ -82,7 +83,7 @@ await emit("package.json", JSON.stringify(infra, null, 2) + "\n");
 await emit(".gitignore", "**/bin/\n**/obj/\nnode_modules/\n**/local.machine.json\n.alchemy/\n.packages/\n.env\n.env.*\n*.user\ntest-results/\nplaywright-report/\n");
 await emit("AGENTS.md", (await readFile(resolve(root, "AGENTS.md"), "utf8")).replaceAll("local Todo app", "local app"));
 await cp(resolve(root, "templates/Flarestack.Templates/content"), output, { recursive: true });
-for (const file of ["accounts-and-email.md", "upgrading.md", "developer-overview.md", "public-api.md", "security-model.md", "database.md", "validation.md", "cloud-preview.md"]) await emit(`docs/${file}`, (await readFile(resolve(root, "docs", file), "utf8")).replaceAll("samples/Todo/", ""));
+for (const file of ["interactive-auto.md", "accounts-and-email.md", "upgrading.md", "developer-overview.md", "public-api.md", "security-model.md", "database.md", "validation.md", "cloud-preview.md"]) await emit(`docs/${file}`, transform(await readFile(resolve(root, "docs", file), "utf8")).replaceAll("samples/Todo/", ""));
 for (const name of ["Flarestack.D1", "Flarestack.Authentication", "Flarestack.Email", "Aspire.Hosting.Flarestack"]) {
   const file = `${name}.${version}.nupkg`;
   await mkdir(resolve(output, "artifacts/nuget"), { recursive: true });

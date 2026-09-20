@@ -31,8 +31,13 @@ test.each([
     expect(local.stackName).toBe(`app-${slug}`);
     expect(local.project).toBe(`${project}.Web/${project}.Web.csproj`);
     expect(await Bun.file(join(directory, local.project)).exists()).toBe(true);
+    expect(await Bun.file(join(directory, `${project}.Client/${project}.Client.csproj`)).exists()).toBe(true);
+    expect(await readFile(join(directory, `${project}.Client/Pages/Todos.razor`), "utf8")).toContain("@rendermode InteractiveAuto");
     for (const path of local.buildSources) expect((await readdir(directory)).includes(path.split("/")[0])).toBe(true);
     const host = await readFile(join(directory, `${project}.AppHost/${project}.AppHost.csproj`), "utf8");
+    const hostCode = await readFile(join(directory, `${project}.AppHost/AppHost.cs`), "utf8");
+    expect(hostCode).toContain('AddFlarestackPlatform("cloudflare", "../infra", mode)');
+    expect(hostCode).toContain('.WithApplication("app")');
     const secretId = host.match(/<UserSecretsId>(.*?)<\/UserSecretsId>/)![1]!;
     expect(secretId).not.toBe("1709b865-a1ba-4d20-8b74-0482bc3feb4c");
     expect(secretIds.has(secretId)).toBe(false);

@@ -7,6 +7,9 @@ recorded separately from the broader local suite.
 | --- | --- | --- | --- |
 | OIDC signup/login/logout | Browser tested | Browser tested | Verified signup/login/callback tested; logout pending |
 | D1 migrations and persistence | Tested | Tested | Initial migration and account persistence after redeploy tested |
+| Interactive Auto: cold Server → cached WebAssembly CRUD | Browser tested | Packed-template browser tested | Not tested |
+| Browser session revalidation / CSRF / owned API | Browser tested | Packed-template browser tested | Not tested |
+| Browser logs and WebAssembly API → D1 traces | Verified in Aspire | Verified in Aspire | Not tested |
 | Blazor WebSockets / owned CRUD | Browser tested | Browser tested | WebSocket handshake and owned read tested; browser CRUD pending |
 | Email | Capture tested | Capture tested | Verification delivery confirmed by recipient |
 | Password recovery / session controls | Browser tested | Browser tested | Not tested |
@@ -17,11 +20,14 @@ recorded separately from the broader local suite.
 
 ## Reproduction
 
-Preview `0.1.0-local.2` uses protocol 2. Verification includes 24 .NET tests,
+Preview `0.1.0-local.2` uses protocol 2. Verification includes 36 .NET tests,
 60 Bun tests (137 assertions), TypeScript checks, and packed-template checks.
 Fast acceptance exercised the previous `0.1.0-local.1` archive as well as a
 clean installation. Both modes verify connected Worker/.NET/D1/auth/email traces
-and local logs in Aspire. The [cloud preview record](cloud-preview.md) describes
+and local logs in Aspire. The Auto tests also prove cached browser rendering without
+an active Blazor WebSocket, immediate API rejection after logout, idle browser
+session revocation and cross-user update/delete rejection. The Container acceptance
+run includes a published WASM bundle, an added migration and unchanged existing data. The [cloud preview record](cloud-preview.md) describes
 the initial deployment and measured cloud coverage; cloud failure behavior and
 the full vertical slice remain untested.
 

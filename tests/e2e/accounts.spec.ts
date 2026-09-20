@@ -49,6 +49,7 @@ test("verification, password recovery, profile and session revocation", async ({
 });
 
 test("password changes and self-service session controls", async ({browser}) => {
+  test.setTimeout(150_000);
   const owner = await browser.newContext(); const page = await owner.newPage();
   const secondary = await browser.newContext(); const other = await secondary.newPage();
   const email = `security-${crypto.randomUUID()}@example.test`;
@@ -70,8 +71,15 @@ test("password changes and self-service session controls", async ({browser}) => 
     await expect(page.getByRole("status")).toContainText("Changes saved");
     await other.goto("/todos");await expect(other.locator("#sign-in-form")).toBeVisible();
     await loginOther(password+"Changed");
+    await expect(async () => {
+      await other.reload();
+      await expect(other.locator(".workspace")).toHaveAttribute("data-renderer", "WebAssembly", {timeout:3000});
+    }).toPass({timeout:45000, intervals:[2000]});
     await page.getByRole("button",{name:"Sign out other sessions",exact:true}).click();
     await expect(page.getByRole("status")).toContainText("Other sessions signed out");
+    // An idle cached WASM page must lose its authenticated UI without navigation.
+    await expect(other.getByRole("heading", {name:"Session or permissions changed"})).toBeVisible({timeout:45000});
+    expect((await other.request.get("/api/todos", {maxRedirects:0})).status()).toBe(401);
     await other.goto("/todos");await expect(other.locator("#sign-in-form")).toBeVisible();
     await expect(page.locator("#sessions").getByRole("button",{name:"Revoke",exact:true})).toHaveCount(1);
     await page.locator("#sessions").getByRole("button",{name:"Revoke",exact:true}).click();

@@ -5,7 +5,8 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-namespace Microsoft.Extensions.Hosting;
+namespace Todo.ServiceDefaults;
+
 public static class ServiceDefaults
 {
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder

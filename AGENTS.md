@@ -21,3 +21,26 @@ cookies, authorization headers, or OAuth query state.
 Native .NET and Worker traces are implemented. Preserve W3C propagation across
 the edge, .NET, and internal D1/auth handlers. Verify traces in Aspire after changes;
 console log messages alone are not traces. Metrics are not configured.
+
+# Code style and repository skills
+
+Repository-local .NET guidance is vendored in `.agents/skills`; provenance and
+license are recorded there. Consult relevant skills rather than loading all of them:
+
+- C# readability: `.agents/skills/csharp-coding-standards/SKILL.md`.
+- Public API changes: `.agents/skills/csharp-api-design/SKILL.md`.
+- DI and options: `.agents/skills/microsoft-extensions-dependency-injection/SKILL.md`
+  and `.agents/skills/microsoft-extensions-configuration/SKILL.md`.
+- Build/package layout: `.agents/skills/project-structure/SKILL.md`.
+
+Prefer familiar .NET library conventions: focused extension methods, explicit
+options, descriptive identifiers, braces, and one statement per line. Separate
+public contracts, registration, transport, and security policy when those have
+independent responsibilities. Keep simple logic simple; do not introduce generic
+frameworks, Result types, or allocation optimizations solely to follow a skill.
+
+Treat upstream recommendations as guidance and check examples against the actual
+SDK. Preserve our Alchemy ownership model, session validation, ownership filters,
+and telemetry. Formatting changes and behavior changes should be reviewable
+separately. See `docs/code-style-review.md` for the reference integrations and
+proposed refactoring order. Do not reformat vendored skills or generated bundles.

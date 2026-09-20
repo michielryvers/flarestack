@@ -41,10 +41,26 @@ for (let attempt = 0; attempt < 20; attempt++) {
   const d1 = traces.find(t => t.spans.some(s => /^(?:todo|flarestack\.todo)(?:-|$)/.test(s.source) && s.name.startsWith("D1 ")) && t.spans.some(s => s.source === "flarestack.d1"));
   const auth = traces.find(t => t.spans.some(s => /^(?:todo|flarestack\.todo)(?:-|$)/.test(s.source)) && t.spans.some(s => s.source === "flarestack.auth-backchannel"));
   const email = traces.find(t => t.spans.some(s => s.name === "email.send") && t.spans.some(s => s.source === "flarestack.email"));
-  if (http && d1 && auth && email) {
-    console.log(`PASS: connected Worker/.NET, .NET/D1, .NET/auth, and .NET/email traces in Aspire. D1 trace: ${dashboard}/traces/detail/${d1.traceId}`);
+  const wasm = traces.find(t => t.spans.some(s => s.source === "flarestack.worker" && s.name === "POST /api/todos") &&
+    t.spans.some(s => /^(?:todo|flarestack\.todo)(?:-|$)/.test(s.source) && s.name === "D1 execute") &&
+    t.spans.some(s => s.source === "flarestack.d1"));
+  if (http && d1 && auth && email && wasm) {
+    console.log(`PASS: connected Worker/.NET, .NET/D1, .NET/auth, .NET/email and WebAssembly API/D1 traces in Aspire. D1 trace: ${dashboard}/traces/detail/${d1.traceId}`);
     break;
   }
   if (attempt === 19) throw new Error("Missing connected traces; run bun run test:e2e first to generate Todo/auth/D1 activity.");
+  await Bun.sleep(500);
+}
+
+// Browser logs take the authenticated, CSRF-protected app route to the same OTLP exporter.
+for (let attempt = 0; attempt < 20; attempt++) {
+  const command = Bun.spawn(["aspire", "otel", "logs", ...dashboardArgs, "--format", "Json", "--limit", "10000", "--non-interactive"], {stdout:"pipe", stderr:"pipe"});
+  const [output, error, code] = await Promise.all([new Response(command.stdout).text(), new Response(command.stderr).text(), command.exited]);
+  assert.equal(code, 0, error);
+  if (JSON.parse(output).some((record: {message:string}) => record.message === "Browser event 1000 (WebAssembly)")) {
+    console.log("PASS: browser logs forwarded through ASP.NET to Aspire");
+    break;
+  }
+  if (attempt === 19) throw new Error("Missing WebAssembly startup log");
   await Bun.sleep(500);
 }

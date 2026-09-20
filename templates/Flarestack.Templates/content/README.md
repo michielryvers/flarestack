@@ -1,8 +1,9 @@
 # FlarestackTemplate
 
-A .NET 10 Blazor Web App using Interactive Server rendering with Better Auth OIDC, D1, and Aspire.
+A .NET 10 Blazor Web App using Interactive Auto for Todo and Interactive Server for account/admin pages with Better Auth OIDC, D1, and Aspire.
 The generated app includes versioned local framework packages; it does not need
-access to the Flarestack source repository.
+access to the Flarestack source repository. See [Interactive Auto](docs/interactive-auto.md)
+for the client/server split, authenticated HTTP endpoints and rendering behavior.
 
 ## Run locally
 

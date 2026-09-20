@@ -1,0 +1,70 @@
+#nullable enable
+const Flarestack.D1.D1Options.SectionName = "Flarestack:D1" -> string!
+Flarestack.D1.D1CardinalityException
+Flarestack.D1.D1CardinalityException.D1CardinalityException() -> void
+Flarestack.D1.D1Command
+Flarestack.D1.D1Command.<Clone>$() -> Flarestack.D1.D1Command!
+Flarestack.D1.D1Command.D1Command(string! Sql, System.Collections.Generic.IReadOnlyList<object?>! Parameters, Flarestack.D1.D1CommandKind Kind = Flarestack.D1.D1CommandKind.Execute) -> void
+Flarestack.D1.D1Command.Deconstruct(out string! Sql, out System.Collections.Generic.IReadOnlyList<object?>! Parameters, out Flarestack.D1.D1CommandKind Kind) -> void
+Flarestack.D1.D1Command.Equals(Flarestack.D1.D1Command? other) -> bool
+Flarestack.D1.D1Command.Kind.get -> Flarestack.D1.D1CommandKind
+Flarestack.D1.D1Command.Kind.init -> void
+Flarestack.D1.D1Command.Parameters.get -> System.Collections.Generic.IReadOnlyList<object?>!
+Flarestack.D1.D1Command.Parameters.init -> void
+Flarestack.D1.D1Command.Sql.get -> string!
+Flarestack.D1.D1Command.Sql.init -> void
+Flarestack.D1.D1CommandKind
+Flarestack.D1.D1CommandKind.Execute = 0 -> Flarestack.D1.D1CommandKind
+Flarestack.D1.D1CommandKind.Query = 1 -> Flarestack.D1.D1CommandKind
+Flarestack.D1.D1CommandResult
+Flarestack.D1.D1CommandResult.<Clone>$() -> Flarestack.D1.D1CommandResult!
+Flarestack.D1.D1CommandResult.D1CommandResult(int RowsAffected, System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? Rows = null) -> void
+Flarestack.D1.D1CommandResult.Deconstruct(out int RowsAffected, out System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? Rows) -> void
+Flarestack.D1.D1CommandResult.Equals(Flarestack.D1.D1CommandResult? other) -> bool
+Flarestack.D1.D1CommandResult.Rows.get -> System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>?
+Flarestack.D1.D1CommandResult.Rows.init -> void
+Flarestack.D1.D1CommandResult.RowsAffected.get -> int
+Flarestack.D1.D1CommandResult.RowsAffected.init -> void
+Flarestack.D1.D1Database
+Flarestack.D1.D1Database.BatchAsync(System.Collections.Generic.IReadOnlyList<Flarestack.D1.D1Command!>! commands, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Flarestack.D1.D1CommandResult!>!>!
+Flarestack.D1.D1Database.D1Database(System.Net.Http.HttpClient! client, Flarestack.D1.D1Options! options, Microsoft.Extensions.Logging.ILogger<Flarestack.D1.D1Database!>! logger) -> void
+Flarestack.D1.D1Database.ExecuteAsync(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+Flarestack.D1.D1Database.QueryAsync<T>(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>!>!
+Flarestack.D1.D1Database.QuerySingleOrDefaultAsync<T>(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+Flarestack.D1.D1Exception
+Flarestack.D1.D1Exception.Code.get -> string!
+Flarestack.D1.D1Exception.CorrelationId.get -> string!
+Flarestack.D1.D1Exception.D1Exception(string! code, string! operation, string! correlationId) -> void
+Flarestack.D1.D1Exception.Operation.get -> string!
+Flarestack.D1.D1Options
+Flarestack.D1.D1Options.BaseAddress.get -> string!
+Flarestack.D1.D1Options.BaseAddress.set -> void
+Flarestack.D1.D1Options.D1Options() -> void
+Flarestack.D1.D1Options.IncludeSqlInTraces.get -> bool
+Flarestack.D1.D1Options.IncludeSqlInTraces.set -> void
+Flarestack.D1.D1Options.MaxCommands.get -> int
+Flarestack.D1.D1Options.MaxCommands.set -> void
+Flarestack.D1.D1Options.MaxRequestBytes.get -> int
+Flarestack.D1.D1Options.MaxRequestBytes.set -> void
+Flarestack.D1.D1Options.TimeoutSeconds.get -> int
+Flarestack.D1.D1Options.TimeoutSeconds.set -> void
+Flarestack.D1.D1Registration
+Flarestack.D1.ID1Database
+Flarestack.D1.ID1Database.BatchAsync(System.Collections.Generic.IReadOnlyList<Flarestack.D1.D1Command!>! commands, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Flarestack.D1.D1CommandResult!>!>!
+Flarestack.D1.ID1Database.ExecuteAsync(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+Flarestack.D1.ID1Database.QueryAsync<T>(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>!>!
+Flarestack.D1.ID1Database.QuerySingleOrDefaultAsync<T>(string! sql, System.Collections.Generic.IReadOnlyList<object?>? parameters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+override Flarestack.D1.D1Command.Equals(object? obj) -> bool
+override Flarestack.D1.D1Command.GetHashCode() -> int
+override Flarestack.D1.D1Command.ToString() -> string!
+override Flarestack.D1.D1CommandResult.Equals(object? obj) -> bool
+override Flarestack.D1.D1CommandResult.GetHashCode() -> int
+override Flarestack.D1.D1CommandResult.ToString() -> string!
+static Flarestack.D1.D1Command.operator !=(Flarestack.D1.D1Command? left, Flarestack.D1.D1Command? right) -> bool
+static Flarestack.D1.D1Command.operator ==(Flarestack.D1.D1Command? left, Flarestack.D1.D1Command? right) -> bool
+static Flarestack.D1.D1CommandResult.operator !=(Flarestack.D1.D1CommandResult? left, Flarestack.D1.D1CommandResult? right) -> bool
+static Flarestack.D1.D1CommandResult.operator ==(Flarestack.D1.D1CommandResult? left, Flarestack.D1.D1CommandResult? right) -> bool
+static Flarestack.D1.D1Database.ConvertParameter(object? value) -> object?
+static Flarestack.D1.D1Registration.AddFlarestackD1(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Flarestack.D1.D1Registration.AddFlarestackD1(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<Flarestack.D1.D1Options!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static readonly Flarestack.D1.D1Database.ActivitySource -> System.Diagnostics.ActivitySource!

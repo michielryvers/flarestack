@@ -1,6 +1,6 @@
 # Flarestack
 
-.NET 10 Interactive Server Blazor, Better Auth OIDC, Cloudflare Workers/Containers,
+.NET 10 Blazor with Interactive Auto Todo and Interactive Server account/admin pages, Better Auth OIDC, Cloudflare Workers/Containers,
 and D1. The Todo sample uses `Flarestack.Authentication`, `Flarestack.D1`, and
 `Aspire.Hosting.Flarestack`. Everything currently runs locally; nothing has been
 deployed or published to Cloudflare.

@@ -3,6 +3,7 @@
   <Folder Name="/samples/Todo/">
     <Project Path="samples/Todo/Todo.ServiceDefaults/Todo.ServiceDefaults.csproj" />
     <Project Path="samples/Todo/Todo.Web/Todo.Web.csproj" />
+    <Project Path="samples/Todo/Todo.Client/Todo.Client.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Aspire.Hosting.Flarestack/Aspire.Hosting.Flarestack.csproj" />
@@ -11,6 +12,7 @@
     <Project Path="src/Flarestack.D1/Flarestack.D1.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Flarestack.Hosting.Tests/Flarestack.Hosting.Tests.csproj" />
     <Project Path="tests/Flarestack.Tests/Flarestack.Tests.csproj" />
   </Folder>
   <Project Path="Flarestack.AppHost/Flarestack.AppHost.csproj" />

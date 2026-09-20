@@ -50,6 +50,7 @@ export function FlarestackApp(options: FlarestackAppOptions) {
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
     dev: { port: options.local.port, strictPort: true },
     env: { ...bindings, ...(fast ? {} : { DotNet: DotNetImage }),
+      LOCAL_PUBLIC_ORIGIN: process.env.FLARESTACK_DEPLOY === "1" ? "" : process.env.PUBLIC_ORIGIN ?? "",
       LOCAL_ORIGIN: fast ? process.env.FLARESTACK_LOCAL_ORIGIN! : "",
       CONTAINER_ENV: options.container.environment },
   });

@@ -154,7 +154,7 @@ try {
     if (error.code === "ENOENT") return "{}"; throw error;
   }));
   settings.Flarestack ??= {}; settings.Flarestack.Authentication ??= {};
-  settings.Flarestack.Authentication.Authority = `${app.publicOrigin}/auth`;
+  settings.Flarestack.Authentication.Authority = `${process.env.PUBLIC_ORIGIN ?? app.publicOrigin}/auth`;
   await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   if (!fast) watchContainers();
   const alchemyCli = fileURLToPath(new URL("../bin/cli.js", import.meta.resolve("alchemy")));

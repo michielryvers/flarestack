@@ -3,12 +3,12 @@
 <section class="auth-card">
     <span class="eyebrow">YOUR PERSONAL WORKSPACE</span>
     <h1>Welcome back.</h1><p>Sign in to pick up where you left off.</p>
-    <form id="sign-in-form" data-enhance="false">
+    <form method="post" id="sign-in-form" data-enhance="false">
         <label>Email<input name="email" type="email" autocomplete="email" required /></label>
         <label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required /></label>
         <label class="check-label"><input type="checkbox" name="register" /> Create a new account</label>
         <p id="auth-error" role="alert"></p>
-        <button type="submit">Continue <span>→</span></button>
+        <button type="submit" disabled>Continue <span>→</span></button>
     </form>
     <a href="/account/forgot-password" data-enhance-nav="false">Forgot password?</a>
 </section>

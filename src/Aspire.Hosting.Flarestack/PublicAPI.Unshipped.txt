@@ -1,0 +1,33 @@
+#nullable enable
+Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode
+Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode.Container = 1 -> Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode
+Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode.Fast = 0 -> Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions.ApplicationName.get -> string!
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions.ApplicationName.set -> void
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions.FlarestackOptions() -> void
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions.Mode.get -> Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode
+Aspire.Hosting.Flarestack.Configuration.FlarestackOptions.Mode.set -> void
+Aspire.Hosting.Flarestack.FlarestackLocal
+Aspire.Hosting.Flarestack.Registration.FlarestackHosting
+Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource
+Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource.Application.get -> Aspire.Hosting.ApplicationModel.ExecutableResource?
+Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource.Mode.get -> Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode
+Aspire.Hosting.Flarestack.Resources.FlarestackResources
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.<Clone>$() -> Aspire.Hosting.Flarestack.Resources.FlarestackResources!
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Application.get -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>?
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Application.init -> void
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Deconstruct(out Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>! Platform, out Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>? Application) -> void
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Equals(Aspire.Hosting.Flarestack.Resources.FlarestackResources? other) -> bool
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.FlarestackResources(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>! Platform, Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>? Application) -> void
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Platform.get -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ExecutableResource!>!
+Aspire.Hosting.Flarestack.Resources.FlarestackResources.Platform.init -> void
+override Aspire.Hosting.Flarestack.Resources.FlarestackResources.Equals(object? obj) -> bool
+override Aspire.Hosting.Flarestack.Resources.FlarestackResources.GetHashCode() -> int
+override Aspire.Hosting.Flarestack.Resources.FlarestackResources.ToString() -> string!
+static Aspire.Hosting.Flarestack.FlarestackLocal.Configure(string! infrastructureDirectory, string! appHostFile = "") -> void
+static Aspire.Hosting.Flarestack.Registration.FlarestackHosting.AddFlarestack(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string! name, string! infrastructureDirectory, System.Action<Aspire.Hosting.Flarestack.Configuration.FlarestackOptions!>? configure = null) -> Aspire.Hosting.Flarestack.Resources.FlarestackResources!
+static Aspire.Hosting.Flarestack.Registration.FlarestackHosting.AddFlarestackPlatform(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string! name, string! infrastructureDirectory, Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode mode = Aspire.Hosting.Flarestack.Configuration.FlarestackLocalMode.Fast) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource!>!
+static Aspire.Hosting.Flarestack.Registration.FlarestackHosting.WithApplication(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource!>! platform, string! name = "app") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.Flarestack.Resources.FlarestackPlatformResource!>!
+static Aspire.Hosting.Flarestack.Resources.FlarestackResources.operator !=(Aspire.Hosting.Flarestack.Resources.FlarestackResources? left, Aspire.Hosting.Flarestack.Resources.FlarestackResources? right) -> bool
+static Aspire.Hosting.Flarestack.Resources.FlarestackResources.operator ==(Aspire.Hosting.Flarestack.Resources.FlarestackResources? left, Aspire.Hosting.Flarestack.Resources.FlarestackResources? right) -> bool

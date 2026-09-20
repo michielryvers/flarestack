@@ -1,7 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
-<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Client.ITodoService).Assembly }" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized><a href="/account/login?returnUrl=/todos">Sign in to see your tasks</a></NotAuthorized>
         </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

@@ -1,0 +1,93 @@
+#nullable enable
+const Flarestack.Authentication.Administration.FlarestackPolicies.Administration = "Flarestack.Administration" -> string!
+const Flarestack.Authentication.Configuration.AuthenticationOptions.SectionName = "Flarestack:Authentication" -> string!
+Flarestack.Authentication.Administration.AdminUser
+Flarestack.Authentication.Administration.AdminUser.<Clone>$() -> Flarestack.Authentication.Administration.AdminUser!
+Flarestack.Authentication.Administration.AdminUser.AdminUser(string! Id, string! Email, string! Name, string! Role, bool Banned) -> void
+Flarestack.Authentication.Administration.AdminUser.Banned.get -> bool
+Flarestack.Authentication.Administration.AdminUser.Banned.init -> void
+Flarestack.Authentication.Administration.AdminUser.Deconstruct(out string! Id, out string! Email, out string! Name, out string! Role, out bool Banned) -> void
+Flarestack.Authentication.Administration.AdminUser.Email.get -> string!
+Flarestack.Authentication.Administration.AdminUser.Email.init -> void
+Flarestack.Authentication.Administration.AdminUser.Equals(Flarestack.Authentication.Administration.AdminUser? other) -> bool
+Flarestack.Authentication.Administration.AdminUser.Id.get -> string!
+Flarestack.Authentication.Administration.AdminUser.Id.init -> void
+Flarestack.Authentication.Administration.AdminUser.Name.get -> string!
+Flarestack.Authentication.Administration.AdminUser.Name.init -> void
+Flarestack.Authentication.Administration.AdminUser.Role.get -> string!
+Flarestack.Authentication.Administration.AdminUser.Role.init -> void
+Flarestack.Authentication.Administration.FlarestackPolicies
+Flarestack.Authentication.Administration.IUserAdministration
+Flarestack.Authentication.Administration.IUserAdministration.ListAsync(string! search = "", int offset = 0, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Flarestack.Authentication.Administration.UserPage!>!
+Flarestack.Authentication.Administration.IUserAdministration.RevokeSessionsAsync(string! userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Flarestack.Authentication.Administration.IUserAdministration.SetDisabledAsync(string! userId, bool disabled, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Flarestack.Authentication.Administration.IUserAdministration.SetRoleAsync(string! userId, Flarestack.Authentication.Administration.UserRole role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Flarestack.Authentication.Administration.UserPage
+Flarestack.Authentication.Administration.UserPage.<Clone>$() -> Flarestack.Authentication.Administration.UserPage!
+Flarestack.Authentication.Administration.UserPage.Deconstruct(out Flarestack.Authentication.Administration.AdminUser![]! Users, out int Total) -> void
+Flarestack.Authentication.Administration.UserPage.Equals(Flarestack.Authentication.Administration.UserPage? other) -> bool
+Flarestack.Authentication.Administration.UserPage.Total.get -> int
+Flarestack.Authentication.Administration.UserPage.Total.init -> void
+Flarestack.Authentication.Administration.UserPage.UserPage(Flarestack.Authentication.Administration.AdminUser![]! Users, int Total) -> void
+Flarestack.Authentication.Administration.UserPage.Users.get -> Flarestack.Authentication.Administration.AdminUser![]!
+Flarestack.Authentication.Administration.UserPage.Users.init -> void
+Flarestack.Authentication.Administration.UserRole
+Flarestack.Authentication.Administration.UserRole.Admin = 1 -> Flarestack.Authentication.Administration.UserRole
+Flarestack.Authentication.Administration.UserRole.User = 0 -> Flarestack.Authentication.Administration.UserRole
+Flarestack.Authentication.Configuration.AccountEndpointOptions
+Flarestack.Authentication.Configuration.AccountEndpointOptions.AccountEndpointOptions() -> void
+Flarestack.Authentication.Configuration.AccountEndpointOptions.DefaultReturnPath.get -> string!
+Flarestack.Authentication.Configuration.AccountEndpointOptions.DefaultReturnPath.set -> void
+Flarestack.Authentication.Configuration.AuthenticationOptions
+Flarestack.Authentication.Configuration.AuthenticationOptions.AuthenticationOptions() -> void
+Flarestack.Authentication.Configuration.AuthenticationOptions.Authority.get -> string!
+Flarestack.Authentication.Configuration.AuthenticationOptions.Authority.set -> void
+Flarestack.Authentication.Configuration.AuthenticationOptions.BackchannelBaseAddress.get -> string?
+Flarestack.Authentication.Configuration.AuthenticationOptions.BackchannelBaseAddress.set -> void
+Flarestack.Authentication.Configuration.AuthenticationOptions.ClientId.get -> string!
+Flarestack.Authentication.Configuration.AuthenticationOptions.ClientId.set -> void
+Flarestack.Authentication.Endpoints.FlarestackAuthentication
+Flarestack.Authentication.Registration.FlarestackAuthentication
+Flarestack.Authentication.Sessions.AccountSession
+Flarestack.Authentication.Sessions.AccountSession.<Clone>$() -> Flarestack.Authentication.Sessions.AccountSession!
+Flarestack.Authentication.Sessions.AccountSession.AccountSession(string! Id, string! Email, string! Name, string![]! Roles) -> void
+Flarestack.Authentication.Sessions.AccountSession.Deconstruct(out string! Id, out string! Email, out string! Name, out string![]! Roles) -> void
+Flarestack.Authentication.Sessions.AccountSession.Email.get -> string!
+Flarestack.Authentication.Sessions.AccountSession.Email.init -> void
+Flarestack.Authentication.Sessions.AccountSession.Equals(Flarestack.Authentication.Sessions.AccountSession? other) -> bool
+Flarestack.Authentication.Sessions.AccountSession.Id.get -> string!
+Flarestack.Authentication.Sessions.AccountSession.Id.init -> void
+Flarestack.Authentication.Sessions.AccountSession.Name.get -> string!
+Flarestack.Authentication.Sessions.AccountSession.Name.init -> void
+Flarestack.Authentication.Sessions.AccountSession.Roles.get -> string![]!
+Flarestack.Authentication.Sessions.AccountSession.Roles.init -> void
+Flarestack.Authentication.Sessions.FlarestackAuthenticationStateProvider
+Flarestack.Authentication.Sessions.FlarestackAuthenticationStateProvider.FlarestackAuthenticationStateProvider(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Flarestack.Authentication.Transport.AccountClient! client) -> void
+Flarestack.Authentication.Transport.AccountClient
+Flarestack.Authentication.Transport.AccountClient.AccountClient(System.Net.Http.HttpClient! client, Microsoft.Extensions.Logging.ILogger<Flarestack.Authentication.Transport.AccountClient!>! logger) -> void
+Flarestack.Authentication.Transport.AccountClient.ValidateAsync(System.Security.Claims.ClaimsPrincipal! actor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Flarestack.Authentication.Sessions.AccountSession?>!
+Flarestack.Authentication.Transport.AuthorityBackchannelHandler
+Flarestack.Authentication.Transport.AuthorityBackchannelHandler.AuthorityBackchannelHandler(System.Uri! authority, System.Uri! backchannel, string? bridgeToken = null) -> void
+Flarestack.Authentication.Users.ICurrentUser
+Flarestack.Authentication.Users.ICurrentUser.GetPrincipalAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsPrincipal!>!
+Flarestack.Authentication.Users.ICurrentUser.GetRequiredIdAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+override Flarestack.Authentication.Administration.AdminUser.Equals(object? obj) -> bool
+override Flarestack.Authentication.Administration.AdminUser.GetHashCode() -> int
+override Flarestack.Authentication.Administration.AdminUser.ToString() -> string!
+override Flarestack.Authentication.Administration.UserPage.Equals(object? obj) -> bool
+override Flarestack.Authentication.Administration.UserPage.GetHashCode() -> int
+override Flarestack.Authentication.Administration.UserPage.ToString() -> string!
+override Flarestack.Authentication.Sessions.AccountSession.Equals(object? obj) -> bool
+override Flarestack.Authentication.Sessions.AccountSession.GetHashCode() -> int
+override Flarestack.Authentication.Sessions.AccountSession.ToString() -> string!
+static Flarestack.Authentication.Administration.AdminUser.operator !=(Flarestack.Authentication.Administration.AdminUser? left, Flarestack.Authentication.Administration.AdminUser? right) -> bool
+static Flarestack.Authentication.Administration.AdminUser.operator ==(Flarestack.Authentication.Administration.AdminUser? left, Flarestack.Authentication.Administration.AdminUser? right) -> bool
+static Flarestack.Authentication.Administration.UserPage.operator !=(Flarestack.Authentication.Administration.UserPage? left, Flarestack.Authentication.Administration.UserPage? right) -> bool
+static Flarestack.Authentication.Administration.UserPage.operator ==(Flarestack.Authentication.Administration.UserPage? left, Flarestack.Authentication.Administration.UserPage? right) -> bool
+static Flarestack.Authentication.Endpoints.FlarestackAuthentication.IsLocalReturnUrl(string? url) -> bool
+static Flarestack.Authentication.Endpoints.FlarestackAuthentication.MapFlarestackAccountEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, System.Action<Flarestack.Authentication.Configuration.AccountEndpointOptions!>? configure = null) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Flarestack.Authentication.Registration.FlarestackAuthentication.AddFlarestackAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! config) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Flarestack.Authentication.Registration.FlarestackAuthentication.AddFlarestackAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! config, System.Action<Flarestack.Authentication.Configuration.AuthenticationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Flarestack.Authentication.Sessions.AccountSession.operator !=(Flarestack.Authentication.Sessions.AccountSession? left, Flarestack.Authentication.Sessions.AccountSession? right) -> bool
+static Flarestack.Authentication.Sessions.AccountSession.operator ==(Flarestack.Authentication.Sessions.AccountSession? left, Flarestack.Authentication.Sessions.AccountSession? right) -> bool
+static Flarestack.Authentication.Transport.AuthorityBackchannelHandler.Rewrite(System.Uri! request, System.Uri! authority, System.Uri! backchannel) -> System.Uri!

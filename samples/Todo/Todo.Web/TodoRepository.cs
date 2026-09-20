@@ -1,9 +1,9 @@
+using Todo.Client;
 using Flarestack.D1;
-using Flarestack.Authentication;
+using Flarestack.Authentication.Users;
 namespace Todo.Web;
 
-public sealed record TodoItem(string Id, string OwnerId, string Title, bool IsComplete, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-public sealed class TodoRepository(ID1Database database, ICurrentUser currentUser)
+public sealed class TodoRepository(ID1Database database, ICurrentUser currentUser) : ITodoService
 {
     public async Task<IReadOnlyList<TodoItem>> ListAsync(CancellationToken ct = default) => await database.QueryAsync<TodoItem>("SELECT * FROM todo WHERE owner_id = ?1 ORDER BY created_at DESC", [await currentUser.GetRequiredIdAsync(ct)], ct);
     public async Task<int> AddAsync(string title, CancellationToken ct = default)

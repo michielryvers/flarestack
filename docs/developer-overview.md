@@ -1,7 +1,7 @@
 # Flarestack developer overview
 
 Flarestack is a local-first framework and starter for a **.NET 10 Blazor Web App
-using Interactive Server rendering**, backed by Cloudflare Workers, D1 and Better
+using Interactive Auto for Todo and Interactive Server for account/admin pages**, backed by Cloudflare Workers, D1 and Better
 Auth. It is a preview with local validation and an initial Cloudflare deployment.
 
 ```mermaid
@@ -64,6 +64,10 @@ owns Workers, D1, migrations, containers and email bindings. Fast mode runs .NET
 on the host; Container mode runs the same application in Docker. Both export
 logs and connected traces to Aspire, including optional SQL text.
 
+The Todo workspace starts with Server interactivity and uses WebAssembly on later
+visits once its runtime is cached. See [Interactive Auto](interactive-auto.md) for
+the project structure, protected HTTP API and session behavior.
+
 ## 4. Public APIs
 
 | Package | Developer-facing API |
@@ -79,7 +83,7 @@ negotiate an internal protocol before private operations.
 
 ## 5. Security model
 
-Better Auth is the session authority. Cookies validate on each ASP.NET request;
+Better Auth is the session authority. Cookies validate on ASP.NET page/API requests;
 existing circuits poll every 30 seconds with a 10-second validation timeout.
 `ICurrentUser` rechecks before each repository/admin operation. Failures reject
 access. Administration applies an ASP.NET policy and an independent live Worker

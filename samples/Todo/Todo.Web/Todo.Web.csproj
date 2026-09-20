@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Flarestack.Email" /><PackageReference Include="Flarestack.D1" />
     <PackageReference Include="Flarestack.Authentication" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
   </ItemGroup>
-  <ItemGroup><ProjectReference Include="../Todo.ServiceDefaults/Todo.ServiceDefaults.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../Todo.Client/Todo.Client.csproj" /><ProjectReference Include="../Todo.ServiceDefaults/Todo.ServiceDefaults.csproj" /></ItemGroup>
 </Project>

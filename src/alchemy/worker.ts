@@ -10,6 +10,7 @@ export interface FlarestackWorkerEnv {
   Email?: { fetch(request: Request): Promise<Response> };
   DotNet?: Parameters<typeof getContainer>[0];
   LOCAL_ORIGIN?: string;
+  LOCAL_PUBLIC_ORIGIN?: string;
   CONTAINER_ENV: Record<string, string>;
   OTEL_EXPORTER_OTLP_ENDPOINT: string;
   OTEL_EXPORTER_OTLP_HEADERS: string;
@@ -31,6 +32,14 @@ DotNet.outboundByHost = {
 };
 export default {
   async fetch(request: Request, env: Env) {
+    // Local tunnel TLS ends at cloudflared. Use explicit configuration, never
+    // client-supplied forwarding headers, for the public issuer and redirects.
+    if (env.LOCAL_PUBLIC_ORIGIN) {
+      const url = new URL(request.url);
+      const origin = new URL(env.LOCAL_PUBLIC_ORIGIN);
+      url.protocol = origin.protocol; url.host = origin.host;
+      request = new Request(url, request);
+    }
     const started = performance.now();
     const path = telemetryPath(new URL(request.url).pathname);
     try {

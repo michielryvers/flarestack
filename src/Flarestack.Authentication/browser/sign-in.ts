@@ -21,6 +21,10 @@ form?.addEventListener("submit", async event => {
   finally { button.disabled = false; }
 });
 
+// Keep the form inert until its async module has attached the submit handler.
+const signInButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+if (signInButton) signInButton.disabled = false;
+
 const recovery = document.querySelector<HTMLFormElement>("#recovery-form");
 recovery?.addEventListener("submit", async event => {
   event.preventDefault();

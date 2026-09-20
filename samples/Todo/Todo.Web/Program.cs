@@ -1,18 +1,39 @@
-using Flarestack.Authentication;
+using Flarestack.Authentication.Endpoints;
+using Flarestack.Authentication.Registration;
 using Flarestack.D1;
 using Flarestack.Email;
 using Microsoft.AspNetCore.HttpOverrides;
+using Todo.Client;
+using Todo.ServiceDefaults;
 using Todo.Web;
 using Todo.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
-builder.Services.AddFlarestackD1(builder.Configuration);
-builder.Services.AddFlarestackEmail(builder.Configuration);
-builder.Services.AddFlarestackAuthentication(builder.Configuration);
+builder.Services.AddRazorComponents().AddInteractiveServerComponents().AddInteractiveWebAssemblyComponents();
+// Use the options overloads to validate configuration at startup.
+builder.Services.AddFlarestackD1(builder.Configuration, static _ => { });
+builder.Services.AddFlarestackEmail(builder.Configuration, static _ => { });
+builder.Services.AddFlarestackAuthentication(builder.Configuration, static _ => { });
+builder.Services.PostConfigure<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions>("Cookies", options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api")) context.Response.StatusCode = 401;
+        else context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api")) context.Response.StatusCode = 403;
+        else context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+});
 builder.Services.AddScoped<TodoRepository>();
-builder.Services.Configure<ForwardedHeadersOptions>(options => {
+builder.Services.AddScoped<ITodoService>(services => services.GetRequiredService<TodoRepository>());
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
     options.ForwardedHeaders = ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
     options.ForwardLimit = 1;
     // The only container ingress is the Worker, which replaces these headers.
@@ -24,8 +45,12 @@ app.UseForwardedHeaders();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
-app.MapStaticAssets();
+// Public runtime/CSS assets need no session lookup. WASM downloads many in parallel.
+// Protected pages, API requests and Blazor connections still validate their cookies.
+app.MapStaticAssets().ShortCircuit();
 app.MapFlarestackAccountEndpoints(options => options.DefaultReturnPath = "/todos");
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapTodoApi();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode().AddAdditionalAssemblies(typeof(ITodoService).Assembly);
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.Run();

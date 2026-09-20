@@ -13,7 +13,7 @@ for(const name of ["Flarestack.D1","Flarestack.Authentication","Flarestack.Email
 assert((await readFile(new URL("src/Shared/Protocol.cs",root),"utf8")).includes(`Version = "${protocol}"`),".NET protocol mismatch");
 const infra=await Bun.file(new URL("samples/Todo/infra/package.json",root)).json();
 assert(infra.flarestack.release===version&&infra.flarestack.protocol===protocol,"Infrastructure contract mismatch");
-const hosting=await readFile(new URL("src/Aspire.Hosting.Flarestack/FlarestackHosting.cs",root),"utf8");
+const hosting=await readFile(new URL("src/Aspire.Hosting.Flarestack/Infrastructure/FlarestackInfrastructureManifest.cs",root),"utf8");
 assert(hosting.includes(`GetInt32() != ${protocol}`)&&hosting.includes(`GetString() != "${version}"`),"Hosting contract mismatch");
 
 console.log(`Release ${version}, protocol ${protocol}: package set agrees.`);

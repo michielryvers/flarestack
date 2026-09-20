@@ -1,0 +1,51 @@
+#nullable enable
+const Flarestack.Email.EmailOptions.SectionName = "Flarestack:Email" -> string!
+Flarestack.Email.EmailDeliveryException
+Flarestack.Email.EmailDeliveryException.EmailDeliveryException() -> void
+Flarestack.Email.EmailDeliveryState
+Flarestack.Email.EmailDeliveryState.Accepted = 0 -> Flarestack.Email.EmailDeliveryState
+Flarestack.Email.EmailMessage
+Flarestack.Email.EmailMessage.<Clone>$() -> Flarestack.Email.EmailMessage!
+Flarestack.Email.EmailMessage.Deconstruct(out string! To, out string! Subject, out string! Text) -> void
+Flarestack.Email.EmailMessage.EmailMessage(string! To, string! Subject, string! Text) -> void
+Flarestack.Email.EmailMessage.Equals(Flarestack.Email.EmailMessage? other) -> bool
+Flarestack.Email.EmailMessage.Subject.get -> string!
+Flarestack.Email.EmailMessage.Subject.init -> void
+Flarestack.Email.EmailMessage.Text.get -> string!
+Flarestack.Email.EmailMessage.Text.init -> void
+Flarestack.Email.EmailMessage.To.get -> string!
+Flarestack.Email.EmailMessage.To.init -> void
+Flarestack.Email.EmailOptions
+Flarestack.Email.EmailOptions.BaseAddress.get -> string!
+Flarestack.Email.EmailOptions.BaseAddress.set -> void
+Flarestack.Email.EmailOptions.EmailOptions() -> void
+Flarestack.Email.EmailOptions.Timeout.get -> System.TimeSpan
+Flarestack.Email.EmailOptions.Timeout.set -> void
+Flarestack.Email.EmailRegistration
+Flarestack.Email.EmailSender
+Flarestack.Email.EmailSender.EmailSender(System.Net.Http.HttpClient! client, Microsoft.Extensions.Logging.ILogger<Flarestack.Email.EmailSender!>! logger) -> void
+Flarestack.Email.EmailSender.SendAsync(Flarestack.Email.EmailMessage! message, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Flarestack.Email.EmailSendResult!>!
+Flarestack.Email.EmailSendResult
+Flarestack.Email.EmailSendResult.<Clone>$() -> Flarestack.Email.EmailSendResult!
+Flarestack.Email.EmailSendResult.Deconstruct(out Flarestack.Email.EmailDeliveryState State, out string? ProviderMessageId) -> void
+Flarestack.Email.EmailSendResult.EmailSendResult(Flarestack.Email.EmailDeliveryState State, string? ProviderMessageId = null) -> void
+Flarestack.Email.EmailSendResult.Equals(Flarestack.Email.EmailSendResult? other) -> bool
+Flarestack.Email.EmailSendResult.ProviderMessageId.get -> string?
+Flarestack.Email.EmailSendResult.ProviderMessageId.init -> void
+Flarestack.Email.EmailSendResult.State.get -> Flarestack.Email.EmailDeliveryState
+Flarestack.Email.EmailSendResult.State.init -> void
+Flarestack.Email.IFlarestackEmailSender
+Flarestack.Email.IFlarestackEmailSender.SendAsync(Flarestack.Email.EmailMessage! message, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Flarestack.Email.EmailSendResult!>!
+override Flarestack.Email.EmailMessage.Equals(object? obj) -> bool
+override Flarestack.Email.EmailMessage.GetHashCode() -> int
+override Flarestack.Email.EmailMessage.ToString() -> string!
+override Flarestack.Email.EmailSendResult.Equals(object? obj) -> bool
+override Flarestack.Email.EmailSendResult.GetHashCode() -> int
+override Flarestack.Email.EmailSendResult.ToString() -> string!
+static Flarestack.Email.EmailMessage.operator !=(Flarestack.Email.EmailMessage? left, Flarestack.Email.EmailMessage? right) -> bool
+static Flarestack.Email.EmailMessage.operator ==(Flarestack.Email.EmailMessage? left, Flarestack.Email.EmailMessage? right) -> bool
+static Flarestack.Email.EmailRegistration.AddFlarestackEmail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Flarestack.Email.EmailRegistration.AddFlarestackEmail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<Flarestack.Email.EmailOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Flarestack.Email.EmailSendResult.operator !=(Flarestack.Email.EmailSendResult? left, Flarestack.Email.EmailSendResult? right) -> bool
+static Flarestack.Email.EmailSendResult.operator ==(Flarestack.Email.EmailSendResult? left, Flarestack.Email.EmailSendResult? right) -> bool
+static readonly Flarestack.Email.EmailSender.ActivitySource -> System.Diagnostics.ActivitySource!

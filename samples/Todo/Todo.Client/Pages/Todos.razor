@@ -1,0 +1,56 @@
+@page "/todos"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveAuto
+@inject ITodoService Repository
+@inject AuthenticationStateProvider AuthenticationState
+<PageTitle>My tasks · Flarestack</PageTitle>
+<AuthorizeView>
+<Authorized>
+<section class="workspace" data-renderer="@RendererInfo.Name">
+    <div class="workspace-heading">
+        <div><span class="eyebrow">YOUR WORKSPACE</span><h1>One thing at a time.</h1><p>@DateTime.Now.ToString("dddd, d MMMM") · @_items.Count(x => !x.IsComplete) tasks to go</p></div>
+        <div class="account"><span>@(_user?.FindFirst("email")?.Value ?? _user?.Identity?.Name)</span><form method="post" action="/account/logout" data-enhance="false"><AntiforgeryToken /><button class="text-button" type="submit">Sign out ↗</button></form></div>
+    </div>
+    <div class="task-panel">
+        <form class="add-task" @onsubmit="Add" @onsubmit:preventDefault>
+            <span>＋</span><input aria-label="New task" placeholder="What would you like to get done?" maxlength="200" @bind="_title" @bind:event="oninput" /><button disabled="@(_busy || !_interactive)" type="submit">Add task</button>
+        </form>
+        <div class="task-toolbar"><strong>My tasks <span class="count">@_items.Count</span></strong><div class="filters">@foreach (var filter in new[] { "All", "Active", "Completed" }) { <button class="@(_filter == filter ? "selected" : "")" @onclick="() => _filter = filter">@filter</button> }</div></div>
+        @if (_error is not null) { <p role="alert" class="error">@_error</p> }
+        @if (_loading) { <div class="empty-state">Loading your tasks…</div> }
+        else if (!Visible.Any()) { <div class="empty-state"><span class="empty-icon">✓</span><h2>@(_items.Count == 0 ? "A fresh start." : "All clear here.")</h2><p>Add a task above. Big plans start with small steps.</p></div> }
+        else { <ul class="tasks">@foreach (var item in Visible) { <li @key="item.Id" data-id="@item.Id" class="@(item.IsComplete ? "complete" : "")"><input type="checkbox" aria-label="@($"Complete {item.Title}")" checked="@item.IsComplete" disabled="@(_busy || !_interactive)" @onchange="() => Toggle(item)" /><div><span class="task-title">@item.Title</span><small>@item.CreatedAt.ToLocalTime().ToString("d MMM, HH:mm")</small></div><button class="delete-button" aria-label="@($"Delete {item.Title}")" disabled="@(_busy || !_interactive)" @onclick="() => Delete(item)">×</button></li> }</ul> }
+        <div class="panel-footer"><span>Only you can see these tasks.</span><span>@_items.Count(x => x.IsComplete) completed</span></div>
+    </div>
+</section>
+</Authorized>
+<NotAuthorized><section class="auth-card"><h1>Session or permissions changed</h1><a href="/account/login" data-enhance-nav="false">Sign in again</a></section></NotAuthorized>
+</AuthorizeView>
+@code {
+    private System.Security.Claims.ClaimsPrincipal? _user;
+    private IReadOnlyList<TodoItem> _items = [];
+    private string _title = "", _filter = "All";
+    private string? _error;
+    private bool _loading = true, _busy, _interactive;
+    protected override void OnAfterRender(bool firstRender) { if (firstRender) { _interactive = true; StateHasChanged(); } }
+    private IEnumerable<TodoItem> Visible => _items.Where(x => _filter == "All" || x.IsComplete == (_filter == "Completed"));
+    protected override async Task OnInitializedAsync() {
+        _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        try { _items = await Repository.ListAsync(); } catch { _error = "Unable to load your tasks. Please reload to try again."; }
+        finally { _loading = false; }
+    }
+    private async Task Change(Func<Task> action) {
+        _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        if (_busy || _user.Identity?.IsAuthenticated != true) return;
+        _busy = true; _error = null;
+        using var activity = TodoTelemetry.Source.StartActivity("Todo change");
+        try { await action(); _items = await Repository.ListAsync(); }
+        catch (UnauthorizedAccessException) { _items = []; _error = "Your session has ended. Please sign in again."; }
+        catch (ArgumentException error) { _error = error.Message; }
+        catch { activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error); _error = "Unable to save your change. Please try again."; }
+        finally { _busy = false; }
+    }
+    private Task Add() => Change(async () => { await Repository.AddAsync(_title); _title = ""; });
+    private Task Toggle(TodoItem item) => Change(async () => { await Repository.SetCompleteAsync(item.Id, !item.IsComplete); });
+    private Task Delete(TodoItem item) => Change(async () => { await Repository.DeleteAsync(item.Id); });
+}

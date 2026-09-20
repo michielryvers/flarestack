@@ -10,10 +10,11 @@ representation, not a second independent session authority.
   Both must match. The private Auth handler checks expiry, ban state and required
   email verification against current database records.
 - Cookie validation runs on every request that reaches ASP.NET authentication
-  middleware with an application cookie. This includes app pages, static assets,
+  middleware with an application cookie. This includes app pages, API calls,
   Blazor negotiation and circuit connection requests. Public Worker `/auth/*`
-  requests bypass ASP.NET. A static asset can still return successfully after an
-  invalid cookie is cleared; a protected page challenges instead.
+  requests bypass ASP.NET. Public static assets short-circuit the middleware:
+  downloading CSS/JS/WASM does not validate or clear a cookie. Protected requests
+  continue to validate the live session before granting access.
 - Existing WebSocket circuit events are not new ASP.NET HTTP requests. The
   authentication-state provider revalidates every 30 seconds. Validation times out
   after 10 seconds, so an unavailable authority can take approximately 40 seconds
@@ -23,6 +24,10 @@ representation, not a second independent session authority.
   Todo repository resolves it before each D1 operation; administration resolves it
   and enforces `Flarestack.Administration`. The private Auth handler independently
   checks the administrator's live session and role before every mutation.
+- Session lookups retry transport errors and HTTP 5xx responses at most twice,
+  with 100/200 ms delays inside one 10-second budget. A successful live response
+  is still required. Expired/revoked responses, malformed data and explicit
+  protocol mismatches are not retried. Mutations are never retried by this policy.
 - There is no validation-result cache. Fast mode uses authenticated loopback HTTP
   to the private bridge; Container mode uses HTTP intercepted by the private
   `auth.internal` service binding. These calls do not use the public auth URL.
@@ -46,6 +51,20 @@ representation, not a second independent session authority.
 | Auth unavailable / incompatible | Valid | Fail closed; clear cookie | Fail closed on validation; no new guarded mutation |
 | Valid | Missing | OIDC challenge | No independent circuit sign-in |
 | Role changed | Valid | Refresh role, apply policy | Invalidate stale circuit; guarded operation uses live role |
+
+## WebAssembly sessions
+
+The Todo browser client obtains only public identity claims and a CSRF request token
+from `/api/session`; the HttpOnly application cookie remains the credential. Every
+API request performs the same live cookie validation as server-rendered requests.
+API failures return 401/403, not OIDC redirects. Mutations validate antiforgery tokens
+and derive ownership from `ICurrentUser`, never browser-provided identity.
+
+Browser UI revalidation runs every 30 seconds with a 10-second HTTP timeout and
+fails closed; task API 401/403 responses invalidate it immediately. Displayed roles
+are never an authorization boundary. A different account detected in another tab
+requires a reload before the old workspace can be reused. Already-authorized writes can finish after
+revocation, as in Server mode. See [Interactive Auto](interactive-auto.md).
 
 ## Data ownership and private transport
 

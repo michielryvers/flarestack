@@ -27,7 +27,7 @@ async function install(path:string){
  const remove=Bun.spawn(["dotnet","new","uninstall","Flarestack.Templates"],{cwd:directory,env,stdout:"ignore",stderr:"ignore"});await remove.exited;
  await run(["dotnet","new","install",path],directory);
 }
-async function start(){await run(["aspire","start","--non-interactive","--format","Json"],app,true);await run(["aspire","wait",mode==="Container"?"cloudflare":"app","--non-interactive"]);}
+async function start(){await run(["aspire","start","--non-interactive","--format","Json"],app,true);await run(["aspire","wait",mode==="Container"?"cloudflare":"app","--timeout","300","--non-interactive"]);}
 async function stop(){await run(["aspire","stop","--non-interactive"],app,true);}
 async function verify(){await run(["bunx","playwright","test","todo.spec.ts","accounts.spec.ts"]);await run(["bun","run","verify:telemetry"]);}
 async function databaseSnapshot(){
@@ -63,6 +63,14 @@ try {
  if(!after.upgraded||JSON.stringify(before.todos)!==JSON.stringify(after.todos)||JSON.stringify(before.users)!==JSON.stringify(after.users)||JSON.stringify(before.clients)!==JSON.stringify(after.clients))throw new Error("Migration/upgrade changed existing rows or duplicated provisioning");
  await start();await verify();await stop();
  console.log(`PASS: packed-template clean installation, ${mode}, restart/migration${old?" and preview upgrade":""}. Evidence retained at ${directory}`);
+} catch (error) {
+ // Preserve failure evidence before stopping the in-memory dashboard. Never print raw telemetry.
+ await Promise.allSettled(["logs", "traces"].map(async kind => {
+  const command=Bun.spawn(["aspire","otel",kind,"--format","Json","--limit","10000","--non-interactive"],{cwd:app,env,stdout:"pipe",stderr:"ignore"});
+  const output=await new Response(command.stdout).text();
+  if(await command.exited===0)await writeFile(join(directory,`failure-${kind}.json`),output,{mode:0o600});
+ }));
+ throw error;
 } finally {
  await stop().catch(()=>{});await logs.shutdown();dashboard?.kill("SIGINT");
  console.log(`Acceptance workspace: ${directory}`);
