@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
-import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { acceptanceArguments, acceptanceWorkspace, browserFailureDiagnostics, deploymentResult, migrationSql } from "./cloud-acceptance.ts";
 import { smokeCloud } from "./smoke-cloud.ts";
@@ -61,7 +61,7 @@ test("private workspace resolves ancestor links and rejects the repository throu
     const alias = join(root, "alias");
     await symlink(repository, alias, process.platform === "win32" ? "junction" : "dir");
     await expect(acceptanceWorkspace(repository, join(alias, "new", "workspace"))).rejects.toThrow("outside");
-    expect(await acceptanceWorkspace(repository, join(root, "outside", "new"))).toBe(join(root, "outside", "new"));
+    expect(await acceptanceWorkspace(repository, join(root, "outside", "new"))).toBe(join(await realpath(root), "outside", "new"));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

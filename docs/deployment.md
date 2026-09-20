@@ -4,11 +4,10 @@ The deployment pipeline targets .NET 10.0.401, Aspire 13.5.3, Bun 1.4.2 and
 Alchemy 2.0.0-beta.79. Aspire's custom pipeline API is experimental and isolated
 in the hosting package. See the [deployment decision](adr/deployment-pipeline.md).
 
-A fresh, packaged generated application passed this flow on 20 September 2026,
-including browser authentication, ownership isolation, administration, migration
-and repeated deployment. Email was disabled for that automated stage; an earlier
-Todo preview separately verified delivery. See the [acceptance record](short-path-results.md)
-for commands, evidence and remaining limitations.
+The command checks the generated application's own configuration, provisions its
+named stage, applies migrations and verifies health/OIDC/private-route boundaries.
+Application-specific browser and email delivery checks are separate from that
+smoke check. Production limitations are described below.
 
 ## Configure and deploy
 

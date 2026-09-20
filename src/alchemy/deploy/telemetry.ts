@@ -2,6 +2,7 @@ import { createServer } from "node:net";
 import { LocalLogs, readLines } from "../local/logs.ts";
 import { DeploymentError } from "./config.ts";
 import { redactOutput } from "./safety.ts";
+import { stopProcessTree } from "../local/platform.ts";
 
 async function freePort() {
   const server = createServer();
@@ -63,16 +64,15 @@ export async function deploymentLogs(signal: AbortSignal, onReceiverFailure?: ()
       closing = true;
       try { await logs.shutdown(); } catch { exportFailed = true; }
       finally {
-        dashboard?.kill("SIGINT");
+        if (dashboard) await stopProcessTree(dashboard);
         await Promise.race([Promise.all(readers), Bun.sleep(3000)]);
-        if (dashboard?.exitCode === null) dashboard.kill("SIGKILL");
       }
       assertExported();
     } };
   } catch (error) {
     closing = true;
-    dashboard?.kill("SIGTERM");
-    await logs.shutdown();
+    try { await logs.shutdown(); }
+    finally { if (dashboard) await stopProcessTree(dashboard); }
     throw error;
   }
 }

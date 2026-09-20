@@ -39,7 +39,7 @@ dotnet test Flarestack.slnx --no-restore
 bun run test:template
 ```
 
-Results: 177 .NET tests, 156 Bun tests and two template-generation tests passed.
+Results: 177 .NET tests, 157 Bun tests and two template-generation tests passed.
 Type checking, version alignment, package creation and generated .NET/TypeScript
 builds passed. No test was disabled to obtain these results.
 
@@ -121,11 +121,24 @@ No automatic teardown occurred. Destruction must separately name and confirm
 
 ## Hosted CI and limitations
 
-Linux development-machine Fast and Container journeys passed. The first hosted
-CI run exposed ambient mode leakage in hosting tests and an app startup timeout;
-Windows had not completed package preparation at this checkpoint. Fixes and
-further diagnosis are in progress. Windows/macOS compatibility is not claimed
-from workflow configuration alone.
+Linux Fast and Container journeys passed locally and in hosted CI run
+[35537980021](https://github.com/michielryvers/flarestack/actions/runs/35537980021).
+Clean local runs with `CI=true` passed after moving development state off the
+cloud backend: Fast `run-fbVD5g`, Container `run-Inm3QJ`, each with seven browser
+cases, migration/restart and connected traces. A prior local Bun install stalled;
+an isolated retry recovered it, and the final fresh Fast run completed unaided.
+
+Windows now completes packaging and process-tree cleanup. Its hosted run found a
+test expectation using an 8.3 temporary-path alias rather than the canonical path;
+that assertion is corrected, and full Windows acceptance is still pending. macOS
+and Windows Container mode remain unverified.
+
+The original local Todo installation was also migrated: eight legacy development
+state records were imported through read-only remote requests into private local
+files. The database ID was matched to the existing simulator SQLite filename;
+pre-existing users and Todo rows exactly matched the private pre-migration backup
+after restart. Root account/Todo browser tests and connected Aspire traces passed.
+No remote state was deleted.
 
 Production remains gated on explicitly acknowledging ephemeral ASP.NET Data
 Protection keys; one application container is enforced. Browser cookies may become

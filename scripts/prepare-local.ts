@@ -14,11 +14,19 @@ if (snapshot.trim().startsWith("{")) throw new Error("Stop this AppHost with asp
 // Bootstrap precedes the package-backed AppHost. Give its build/install processes
 // their own temporary Aspire receiver rather than dropping their OTLP logs.
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4320";
-const logs = new LocalLogs(endpoint);
+let exportFailed = false;
+const logs = new LocalLogs(endpoint, { onExportFailure: () => { exportFailed = true; } });
 let dashboard: Bun.Subprocess | undefined;
 const children = new Set<Bun.Subprocess>();
 const readers = new Map<Bun.Subprocess, Promise<void>[]>();
 let collecting = true;
+let receiverReady = !!process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+const startupLogs: Array<[string, string, string]> = [];
+function emit(service: string, line: string, stream = "stdout") {
+  if (!collecting) return;
+  if (receiverReady) logs.emit(service, line, stream);
+  else startupLogs.push([service, line, stream]);
+}
 let interrupted = false;
 function interrupt() {
   interrupted = true;
@@ -32,8 +40,8 @@ function spawn(command: string[], cwd = root, service = "flarestack.packages") {
   const child = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, NO_COLOR: "1" } });
   children.add(child);
   readers.set(child, [
-    readLines(child.stdout, line => { console.log(line); if (collecting) logs.emit(service, line); }),
-    readLines(child.stderr, line => { console.error(line); if (collecting) logs.emit(service, line, "stderr"); }),
+    readLines(child.stdout, line => { console.log(line); emit(service, line); }),
+    readLines(child.stderr, line => { console.error(line); emit(service, line, "stderr"); }),
   ]);
   return child;
 }
@@ -53,6 +61,11 @@ try {
       await Bun.sleep(500);
     }
     if (!ready) throw new Error("Package dashboard did not become ready");
+    receiverReady = true;
+    for (const [service, line, stream] of startupLogs) logs.emit(service, line, stream);
+    startupLogs.length = 0;
+    await logs.flush();
+    if (exportFailed) throw new Error("Package preparation telemetry is unavailable; check the OTLP receiver.");
   }
   await mkdir("artifacts/nuget", { recursive: true });
   await mkdir("artifacts/npm", { recursive: true });
@@ -86,10 +99,10 @@ try {
   await run(["dotnet", "restore", "Flarestack.slnx", "--force", "--no-cache", "--nologo"]);
   await run(["bun", "scripts/stage-template.ts"]);
   await run(["dotnet", "pack", "templates/Flarestack.Templates/Flarestack.Templates.csproj", "-o", "artifacts/templates", "--nologo"]);
-  logs.emit("flarestack.packages", "Local packages and template ready");
+  emit("flarestack.packages", "Local packages and template ready");
   console.log("Local packages ready. Start the Todo AppHost with aspire run.");
 } catch (error) {
-  logs.emit("flarestack.packages", String(error), "stderr");
+  emit("flarestack.packages", String(error), "stderr");
   process.exitCode = 1;
   console.error(error);
 } finally {
@@ -99,7 +112,13 @@ try {
     await Promise.race([Promise.all(workers.flatMap(child => readers.get(child) ?? [])), Bun.sleep(3000)]);
   } finally {
     collecting = false;
-    try { await logs.shutdown(); }
+    try {
+      await logs.shutdown();
+      if (exportFailed) {
+        process.exitCode = 1;
+        console.error("Package preparation telemetry export failed; the collected logs are incomplete.");
+      }
+    }
     finally {
       try {
         if (dashboard) await stopPreparationProcess(dashboard);

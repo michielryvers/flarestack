@@ -27,15 +27,15 @@ export, or session persistence across container replacement. The earlier
 ## Reproduction
 
 Preview `0.1.0-local.2` uses protocol 2. Current verification includes **177 .NET
-tests**, **156 Bun tests**, TypeScript checking and two packed-template generation
+tests**, **157 Bun tests**, TypeScript checking and two packed-template generation
 tests (88 assertions). Fresh Fast and Container applications with the same name
 were generated outside the repository and run concurrently on separate port
 blocks. Both passed administration, recovery, Todo isolation, migration/data
 retention and Aspire log/trace checks. Their Alchemy registries are app-local.
 
 The [short-path acceptance record](short-path-results.md) distinguishes actual
-local/cloud passes from hosted CI gaps. Merely defining the Windows workflow is
-not evidence of Windows compatibility. Earlier preview-upgrade and hot-reload
+local/cloud passes from hosted CI gaps. Hosted Linux Fast and Container acceptance passed; Windows remains in progress.
+Merely defining its workflow is not evidence of Windows compatibility. Earlier preview-upgrade and hot-reload
 results remain historical evidence; they were not repeated for this change.
 
 Build/unit/template/acceptance commands below run in the framework repository.

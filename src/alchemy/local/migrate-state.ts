@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { credentialsFilePath } from "alchemy/Auth/Credentials";
 import { loadLocalApp } from "./config.ts";
 import { LocalLogs } from "./logs.ts";
+import { deploymentLogs } from "../deploy/telemetry.ts";
 
 type JsonObject = Record<string, unknown>;
 export class MigrationError extends Error {}
@@ -94,6 +95,11 @@ export async function migrateLegacyState(options: MigrationOptions, request: typ
 
 if (import.meta.main) {
   let logs: LocalLogs | undefined;
+  let receiver: Awaited<ReturnType<typeof deploymentLogs>> | undefined;
+  const abort = new AbortController();
+  const interrupt = () => abort.abort();
+  process.on("SIGINT", interrupt);
+  process.on("SIGTERM", interrupt);
   let exportFailed = false;
   try {
     const [configuration, ...args] = process.argv.slice(2);
@@ -106,15 +112,23 @@ if (import.meta.main) {
       values[key] = args[++i]!;
     }
     if (!configuration || ["--profile", "--stage", "--account-id", "--database-id"].some(key => !values[key]) || !segment(values["--profile"]!)) throw new MigrationError("Usage: migrate-state.ts <local.json> --profile <profile> --stage dev_<user> --account-id <expected> --database-id <existing-dev:id> [--apply]");
-    const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-    if (!endpoint) throw new MigrationError("Set OTEL_EXPORTER_OTLP_ENDPOINT to the running local receiver before migration.");
+    let endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    if (!endpoint) {
+      receiver = await deploymentLogs(abort.signal, () => { exportFailed = true; abort.abort(); });
+      endpoint = receiver.endpoint;
+    }
     logs = new LocalLogs(endpoint, { onExportFailure: () => { exportFailed = true; } });
     logs.emit("flarestack.state-migration", "Validating legacy local state; cloud requests are read-only.");
     await logs.flush();
     if (exportFailed) throw new MigrationError("Migration telemetry is unavailable.");
     const local = loadLocalApp(configuration);
     const credentials = JSON.parse(await readFile(credentialsFilePath(values["--profile"]!, "cloudflare-state-store"), "utf8"));
-    const result = await migrateLegacyState({ infrastructureDirectory: local.infra, stack: local.stackName, stage: values["--stage"]!, accountId: values["--account-id"]!, databaseId: values["--database-id"]!, credentials, apply });
+    abort.signal.throwIfAborted();
+    const request = Object.assign(
+      (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([abort.signal, init.signal]) : abort.signal }),
+      { preconnect: fetch.preconnect },
+    );
+    const result = await migrateLegacyState({ infrastructureDirectory: local.infra, stack: local.stackName, stage: values["--stage"]!, accountId: values["--account-id"]!, databaseId: values["--database-id"]!, credentials, apply }, request);
     const message = `${result.applied ? "Imported" : "Validated"} ${result.records} legacy state records. SQLite and remote state were unchanged.`;
     logs.emit("flarestack.state-migration", message);
     console.log(message);
@@ -124,7 +138,14 @@ if (import.meta.main) {
     console.error(message);
     process.exitCode = 1;
   } finally {
-    await logs?.shutdown();
+    try { await logs?.shutdown(); }
+    catch { exportFailed = true; }
+    finally {
+      try { await receiver?.close(); }
+      catch { exportFailed = true; }
+    }
+    process.off("SIGINT", interrupt);
+    process.off("SIGTERM", interrupt);
     if (exportFailed) { console.error("Migration telemetry export failed; inspect local state before retrying."); process.exitCode = 1; }
   }
 }

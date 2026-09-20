@@ -46,7 +46,7 @@ export function terminationCommand(pid: number, platform: NodeJS.Platform = proc
 }
 
 export async function stopProcess(child: Bun.Subprocess, force = false): Promise<void> {
-  if (child.exitCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) return;
   const command = terminationCommand(child.pid);
   if (command) {
     const killer = Bun.spawn(command, { stdout: "ignore", stderr: "ignore" });
@@ -54,4 +54,25 @@ export async function stopProcess(child: Bun.Subprocess, force = false): Promise
   } else {
     child.kill(force ? "SIGKILL" : "SIGINT");
   }
+}
+
+async function exitedWithin(child: Bun.Subprocess, milliseconds: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      child.exited.then(() => true),
+      new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), milliseconds); }),
+    ]);
+  } finally { if (timer) clearTimeout(timer); }
+}
+
+/** Drain callers' pipes separately; keep the OTLP receiver alive until they flush. */
+export async function stopProcessTree(child: Bun.Subprocess, graceMilliseconds = 3000) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  // POSIX gets SIGINT first. Windows uses taskkill /T because killing only the
+  // Aspire CLI wrapper leaves its dashboard descendant and inherited pipes alive.
+  await stopProcess(child);
+  if (await exitedWithin(child, graceMilliseconds)) return;
+  await stopProcess(child, true);
+  if (!await exitedWithin(child, 3000)) throw new Error("A child process did not stop after forced termination.");
 }

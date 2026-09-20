@@ -1,6 +1,7 @@
 # Session and authorization model
 
-The application is a .NET 10 Blazor Web App using Interactive Server rendering.
+The application is a .NET 10 Blazor Web App. Todo pages use Interactive Auto;
+account and administration pages use server rendering.
 Better Auth is the session authority; the ASP.NET cookie is an encrypted local
 representation, not a second independent session authority.
 

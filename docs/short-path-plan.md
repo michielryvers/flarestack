@@ -69,14 +69,14 @@ Use explicit Bun test paths: bare filters can discover ignored audit snapshots.
 
 ## Outstanding evidence
 
-- [ ] New generated project: local Fast and Container acceptance.
+- [x] New generated project: local Fast and Container acceptance.
 - [ ] Linux and Windows generated-project CI results.
-- [ ] Fresh generated project: `aspire deploy --environment staging`.
-- [ ] Live health/auth/Todo/ownership/session checks, with email coverage stated.
-- [ ] Redeploy and migration preserve data and stable resources.
+- [x] Fresh generated project: `aspire deploy --environment staging`.
+- [x] Live health/auth/Todo/ownership/session checks, with email coverage stated.
+- [x] Redeploy and migration preserve data and stable resources.
 - [ ] Captured diagnostics and separately confirmed test-stage teardown.
 - [ ] Secret scans of source, generated artifacts, and deployment transcript.
-- [ ] Release artifacts and publication/credential limitations documented.
+- [x] Release artifacts and publication/credential limitations documented.
 
 ## Implementation checkpoint
 
@@ -92,3 +92,7 @@ Focused validation at this checkpoint: 114 application tests, 63 hosting tests,
 passed. Fresh packaged Fast/Container journeys, the new live cloud journey, Windows
 CI and final extension-point tests remain in progress. Counts are checkpoints,
 not a final validation matrix.
+
+Current executed evidence is maintained in [the acceptance record](short-path-results.md);
+the implementation checkpoint above is historical. Local state migration also
+preserves the original Todo installation without deleting remote state.
