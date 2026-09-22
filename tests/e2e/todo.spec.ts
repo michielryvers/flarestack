@@ -6,10 +6,9 @@ const exec = promisify(execFile);
 import { test, expect, type Page } from "@playwright/test";
 import {signUp} from "./accounts.ts";
 test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({browser}) => {
- const alice = await browser.newContext(); const page = await alice.newPage();
+ const alice = await browser.newContext(); let page = await alice.newPage();
  const sockets: string[] = []; page.on("websocket", socket => sockets.push(socket.url()));
  const suffix = crypto.randomUUID();
- const apiWrites: string[] = []; page.on("request", request => { if (request.url().includes("/api/todos") && request.method() !== "GET") apiWrites.push(request.method()); });
  await signUp(page, `alice-${suffix}@example.test`);
  await expect(page.getByRole("button",{name:"Add task",exact:true})).toBeEnabled();
  await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "Server");
@@ -27,6 +26,18 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
    await page.reload();
    await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "WebAssembly", {timeout: 3000});
  }).toPass({timeout: 45000, intervals: [2000]});
+ // A fresh page excludes outgoing Server sockets while retaining Alice's cookies
+ // and cached WASM runtime; blocking the circuit endpoints forbids Server fallback.
+ await page.close();
+ page = await alice.newPage();
+ const wasmSockets: string[] = [];
+ const apiWrites: string[] = [];
+ page.on("websocket", socket => wasmSockets.push(socket.url()));
+ page.on("request", request => { if (request.url().includes("/api/todos") && request.method() !== "GET") apiWrites.push(request.method()); });
+ const blazorEndpoint = (url: URL) => url.pathname === "/_blazor" || url.pathname === "/_blazor/negotiate";
+ await page.route(blazorEndpoint, route => route.abort());
+ await page.goto("/todos");
+ await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "WebAssembly");
  await expect(page.getByRole("button",{name:"Add task",exact:true})).toBeEnabled();
  await page.getByLabel("New task").fill("Created in WebAssembly");
  await page.getByRole("button",{name:"Add task",exact:true}).click();
@@ -34,8 +45,9 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
  await page.getByRole("checkbox",{name:"Complete Created in WebAssembly"}).check();
  await page.getByRole("button",{name:"Delete Created in WebAssembly",exact:true}).click();
  await expect(page.getByText("Created in WebAssembly",{exact:true})).toHaveCount(0);
- expect(sockets.some(url => url.includes("/_blazor"))).toBe(false);
+ expect(wasmSockets.some(url => url.includes("/_blazor"))).toBe(false);
  expect(apiWrites).toEqual(expect.arrayContaining(["POST", "PATCH", "DELETE"]));
+ await page.unroute(blazorEndpoint);
  const privateId = await page.locator("li[data-id]").getAttribute("data-id");
  const session = await (await page.request.get("/api/session")).json();
  expect(session).not.toHaveProperty("sid");
