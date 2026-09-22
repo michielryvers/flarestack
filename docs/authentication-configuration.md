@@ -7,13 +7,13 @@ checks and deferred OpenID Connect environment guard:
 builder.Services.AddFlarestackAuthentication(builder.Configuration);
 ```
 
-Use the three-argument overload to bind typed options and override them in code:
+The canonical builder method binds typed options, with an optional callback:
 
 ```csharp
 using Flarestack.Authentication.Configuration;
-using Flarestack.Authentication.Registration;
+using Flarestack.Authentication;
 
-builder.Services.AddFlarestackAuthentication(builder.Configuration, options =>
+builder.AddFlarestackAuthentication(options =>
 {
     options.ClientId = "todo";
 });
@@ -24,8 +24,8 @@ before the callback. Subsequent `Configure<AuthenticationOptions>` and
 `PostConfigure<AuthenticationOptions>` registrations run before validation.
 Consumers resolve `IOptions<AuthenticationOptions>.Value`; this is startup
 configuration, not live reload. Validation runs when the host starts and also
-when options are first consumed. Register this overload with a host providing
-`IHostEnvironment`.
+when options are first consumed. The builder supplies `IHostEnvironment`; callers do not pass it. Omit the callback
+with `builder.AddFlarestackAuthentication()` to use configuration alone.
 
 | Property | Default | Meaning |
 | --- | --- | --- |

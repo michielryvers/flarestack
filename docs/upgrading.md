@@ -46,8 +46,11 @@ local-preview package directories in its private `.packages/nuget` cache. Check
 release notes for schema or cookie/session changes and expect reauthentication
 when session contracts change. Keep `patches/` while using the pinned Alchemy
 version; both resource readiness and local Worker startup need the bundled fixes.
-Immutable published versions remain future work. See the [initial cloud deployment
-record](cloud-preview.md) for measured cloud coverage and remaining checks.
+Immutable registry publication remains blocked while the starter needs bundled
+archives and root Alchemy patches. The release workflow can build tagged candidates,
+but its publication gate rejects these dependencies before publishing any package.
+See [release policy](releases.md) and the [initial cloud deployment
+record](cloud-preview.md) for the separate package and cloud validation requirements.
 
 
 ## Preview 1 → preview 2

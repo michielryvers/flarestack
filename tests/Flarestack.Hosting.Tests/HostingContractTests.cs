@@ -314,6 +314,10 @@ public sealed class HostingContractTests : IDisposable
             DisableDashboard = true,
             Args = []
         });
+        // Mode-specific cases supply options explicitly; ambient developer settings
+        // must not select a different resource graph for default-mode contracts.
+        builder.Configuration["Flarestack:LocalMode"] = null;
+        builder.Configuration["Flarestack:ApplicationName"] = null;
         builder.Configuration["ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL"] = "http://127.0.0.1:19001";
         return builder;
     }

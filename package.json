@@ -4,17 +4,17 @@
   "packageManager": "bun@1.4.2",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "bun test spikes/compatibility src/alchemy",
+    "test": "bun test ./spikes/compatibility ./src/alchemy ./scripts/local-mode.test.ts ./scripts/release-policy.test.ts ./scripts/cloud-acceptance.test.ts ./scripts/package-process.test.ts ./scripts/acceptance-diagnostics.test.ts ./scripts/e2e-process.test.ts ./scripts/sign-in.test.ts",
     "verify:telemetry": "bun tests/e2e/verify-telemetry.ts",
     "dev": "aspire run",
     "test:e2e": "playwright test",
     "build:auth-ui": "bun build src/Flarestack.Authentication/browser/sign-in.ts --target browser --minify --outfile src/Flarestack.Authentication/wwwroot/sign-in.js",
-    "dev:container": "Flarestack__LocalMode=Container aspire run",
+    "dev:container": "bun scripts/local-mode.ts container",
     "dev:standalone": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/dev.ts samples/Todo/local.json",
-    "test:e2e:container": "FLARESTACK_TEST_MODE=Container playwright test",
-    "test:hot-reload": "FLARESTACK_TEST_HOT_RELOAD=1 playwright test hot-reload",
+    "test:e2e:container": "bun scripts/local-mode.ts e2e-container",
+    "test:hot-reload": "bun scripts/local-mode.ts hot-reload",
     "prepare:local": "bun scripts/prepare-local.ts",
-    "test:template": "bun test scripts/template.test.ts",
+    "test:template": "bun test ./scripts/template.test.ts",
     "configure:local": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/configure.ts samples/Todo/local.json",
     "doctor": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/doctor.ts samples/Todo/local.json",
     "test:acceptance": "bun scripts/accept-template.ts",
@@ -23,7 +23,9 @@
     "plan:cloud": "bun scripts/deploy-cloud.ts plan",
     "deploy:cloud": "bun scripts/deploy-cloud.ts deploy",
     "destroy:cloud": "bun scripts/deploy-cloud.ts destroy",
-    "tunnel": "bun scripts/tunnel.ts"
+    "tunnel": "bun scripts/tunnel.ts",
+    "test:cloud": "bun scripts/accept-cloud.ts",
+    "migrate:local-state": "bun samples/Todo/infra/node_modules/@flarestack/alchemy/local/migrate-state.ts samples/Todo/local.json"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",

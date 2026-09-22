@@ -24,21 +24,30 @@ export function parseLog(line: string, stream = "stdout") {
   };
 }
 
+export interface LocalLogOptions {
+  environment?: string;
+  onExportFailure?: () => void;
+}
+
 export class LocalLogs {
   private providers = new Map<string, LoggerProvider>();
-  constructor(private endpoint: string) {}
+  constructor(private endpoint: string, private options: LocalLogOptions = {}) {}
   emit(service: string, line: string, stream = "stdout", extra: Record<string, string> = {}) {
     const record = parseLog(line, stream);
     if (!record) return;
     let provider = this.providers.get(service);
     if (!provider) {
       const exporter = new OTLPLogExporter({ url: `${this.endpoint.replace(/\/$/, "")}/v1/logs`, timeoutMillis: 3000 });
+      const onExportFailure = this.options.onExportFailure;
       provider = new LoggerProvider({
-        resource: resourceFromAttributes({ "service.name": service, "deployment.environment.name": "local" }),
+        resource: resourceFromAttributes({ "service.name": service, "deployment.environment.name": this.options.environment ?? "local" }),
         processors: [new BatchLogRecordProcessor({ exporter: {
           export(records, callback) {
             exporter.export(records, result => {
-              if (result.code !== 0) console.error(`OTLP log export failed for ${service}: ${result.error?.message ?? "collector unavailable"}`);
+              if (result.code !== 0) {
+                if (onExportFailure) onExportFailure();
+                else console.error(`OTLP log export failed for ${service}: ${result.error?.message ?? "collector unavailable"}`);
+              }
               callback(result);
             });
           },
@@ -50,6 +59,7 @@ export class LocalLogs {
     }
     provider.getLogger("flarestack.local-processes").emit({ ...record, attributes: { ...record.attributes, ...extra } });
   }
+  async flush() { await Promise.all([...this.providers.values()].map(provider => provider.forceFlush())); }
   async shutdown() { await Promise.all([...this.providers.values()].map(provider => provider.shutdown())); }
 }
 

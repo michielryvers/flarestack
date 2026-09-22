@@ -1,6 +1,7 @@
 import { mkdir, rm, readFile, writeFile, copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { LocalLogs, readLines } from "../src/alchemy/local/logs.ts";
+import { stopPreparationProcess } from "./package-process.ts";
 
 const root = resolve(import.meta.dirname, "..");
 process.chdir(root);
@@ -13,22 +14,35 @@ if (snapshot.trim().startsWith("{")) throw new Error("Stop this AppHost with asp
 // Bootstrap precedes the package-backed AppHost. Give its build/install processes
 // their own temporary Aspire receiver rather than dropping their OTLP logs.
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://127.0.0.1:4320";
-const logs = new LocalLogs(endpoint);
+let exportFailed = false;
+const logs = new LocalLogs(endpoint, { onExportFailure: () => { exportFailed = true; } });
 let dashboard: Bun.Subprocess | undefined;
 const children = new Set<Bun.Subprocess>();
-const readers: Promise<void>[] = [];
+const readers = new Map<Bun.Subprocess, Promise<void>[]>();
+let collecting = true;
+let receiverReady = !!process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+const startupLogs: Array<[string, string, string]> = [];
+function emit(service: string, line: string, stream = "stdout") {
+  if (!collecting) return;
+  if (receiverReady) logs.emit(service, line, stream);
+  else startupLogs.push([service, line, stream]);
+}
 let interrupted = false;
 function interrupt() {
   interrupted = true;
-  for (const child of children) if (child !== dashboard && child.exitCode === null) child.kill("SIGTERM");
+  for (const child of children) {
+    if (child !== dashboard && child.exitCode === null) void stopPreparationProcess(child).catch(error => { console.error(error); process.exitCode = 1; });
+  }
 }
 process.on("SIGINT", interrupt);
 process.on("SIGTERM", interrupt);
 function spawn(command: string[], cwd = root, service = "flarestack.packages") {
   const child = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, NO_COLOR: "1" } });
   children.add(child);
-  readers.push(readLines(child.stdout, line => { console.log(line); logs.emit(service, line); }));
-  readers.push(readLines(child.stderr, line => { console.error(line); logs.emit(service, line, "stderr"); }));
+  readers.set(child, [
+    readLines(child.stdout, line => { console.log(line); emit(service, line); }),
+    readLines(child.stderr, line => { console.error(line); emit(service, line, "stderr"); }),
+  ]);
   return child;
 }
 async function run(command: string[], cwd = root) {
@@ -47,6 +61,11 @@ try {
       await Bun.sleep(500);
     }
     if (!ready) throw new Error("Package dashboard did not become ready");
+    receiverReady = true;
+    for (const [service, line, stream] of startupLogs) logs.emit(service, line, stream);
+    startupLogs.length = 0;
+    await logs.flush();
+    if (exportFailed) throw new Error("Package preparation telemetry is unavailable; check the OTLP receiver.");
   }
   await mkdir("artifacts/nuget", { recursive: true });
   await mkdir("artifacts/npm", { recursive: true });
@@ -57,6 +76,7 @@ try {
     // Only clear our local-preview packages in this repository's private cache.
     await rm(resolve(root, ".packages/nuget", name.toLowerCase(), version), { recursive: true, force: true });
   }
+  await copyFile(resolve(root, "LICENSE"), resolve(root, "src/alchemy/LICENSE"));
   await run(["bun", "pm", "pack", "--filename", resolve(root, `artifacts/npm/flarestack-alchemy-${version}.tgz`), "--ignore-scripts"], resolve(root, "src/alchemy"));
   // Bun's --no-cache skips manifest caches, but can still reuse a locked local
   // tarball. Give every distinct archive a distinct path to invalidate it reliably.
@@ -79,17 +99,34 @@ try {
   await run(["dotnet", "restore", "Flarestack.slnx", "--force", "--no-cache", "--nologo"]);
   await run(["bun", "scripts/stage-template.ts"]);
   await run(["dotnet", "pack", "templates/Flarestack.Templates/Flarestack.Templates.csproj", "-o", "artifacts/templates", "--nologo"]);
-  logs.emit("flarestack.packages", "Local packages and template ready");
+  emit("flarestack.packages", "Local packages and template ready");
   console.log("Local packages ready. Start the Todo AppHost with aspire run.");
 } catch (error) {
-  logs.emit("flarestack.packages", String(error), "stderr");
+  emit("flarestack.packages", String(error), "stderr");
   process.exitCode = 1;
   console.error(error);
 } finally {
-  for (const child of children) if (child !== dashboard && child.exitCode === null) child.kill("SIGTERM");
-  await logs.shutdown();
-  dashboard?.kill("SIGINT");
-  await Promise.race([Promise.all(readers), Bun.sleep(3000)]);
-  process.off("SIGINT", interrupt);
-  process.off("SIGTERM", interrupt);
+  try {
+    const workers = [...children].filter(child => child !== dashboard);
+    await Promise.all(workers.map(child => stopPreparationProcess(child)));
+    await Promise.race([Promise.all(workers.flatMap(child => readers.get(child) ?? [])), Bun.sleep(3000)]);
+  } finally {
+    collecting = false;
+    try {
+      await logs.shutdown();
+      if (exportFailed) {
+        process.exitCode = 1;
+        console.error("Package preparation telemetry export failed; the collected logs are incomplete.");
+      }
+    }
+    finally {
+      try {
+        if (dashboard) await stopPreparationProcess(dashboard);
+        await Promise.race([Promise.all([...readers.values()].flat()), Bun.sleep(3000)]);
+      } finally {
+        process.off("SIGINT", interrupt);
+        process.off("SIGTERM", interrupt);
+      }
+    }
+  }
 }

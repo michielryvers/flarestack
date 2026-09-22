@@ -12,8 +12,8 @@ public sealed class FlarestackPlatformResource : ExecutableResource
         string infrastructureDirectory,
         FlarestackLocalMode mode,
         FlarestackInfrastructureManifest manifest,
-        FlarestackLocalSettings settings,
-        IResourceBuilder<ParameterResource> bridgeToken,
+        FlarestackLocalSettings? settings,
+        IResourceBuilder<ParameterResource>? bridgeToken,
         IDistributedApplicationBuilder applicationBuilder)
         : base(name, manifest.DevelopmentCommand[0], infrastructureDirectory)
     {
@@ -31,8 +31,8 @@ public sealed class FlarestackPlatformResource : ExecutableResource
     public ExecutableResource? Application => ApplicationResource?.Resource;
 
     internal FlarestackInfrastructureManifest Manifest { get; }
-    internal FlarestackLocalSettings Settings { get; }
-    internal IResourceBuilder<ParameterResource> BridgeToken { get; }
+    internal FlarestackLocalSettings? Settings { get; }
+    internal IResourceBuilder<ParameterResource>? BridgeToken { get; }
     internal IDistributedApplicationBuilder ApplicationBuilder { get; }
     internal IResourceBuilder<ExecutableResource>? ApplicationResource { get; set; }
     internal bool IsApplicationAttached { get; set; }

@@ -1,5 +1,4 @@
-using Flarestack.Authentication.Endpoints;
-using Flarestack.Authentication.Registration;
+using Flarestack.Authentication;
 using Flarestack.D1;
 using Flarestack.Email;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -11,10 +10,9 @@ using Todo.Web.Components;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents().AddInteractiveWebAssemblyComponents();
-// Use the options overloads to validate configuration at startup.
-builder.Services.AddFlarestackD1(builder.Configuration, static _ => { });
-builder.Services.AddFlarestackEmail(builder.Configuration, static _ => { });
-builder.Services.AddFlarestackAuthentication(builder.Configuration, static _ => { });
+builder.AddFlarestackD1();
+builder.AddFlarestackEmail();
+builder.AddFlarestackAuthentication();
 builder.Services.PostConfigure<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions>("Cookies", options =>
 {
     options.Events.OnRedirectToLogin = context =>

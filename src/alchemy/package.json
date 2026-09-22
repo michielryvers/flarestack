@@ -4,19 +4,24 @@
   "description": "Flarestack Workers, D1, authentication and local Aspire runtime",
   "type": "module",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "exports": {
     ".": "./index.ts",
     "./worker": "./worker.ts",
     "./local/config": "./local/config.ts",
     "./local/dev": "./local/dev.ts",
-    "./local/watch-dotnet": "./local/watch-dotnet.ts"
+    "./local/watch-dotnet": "./local/watch-dotnet.ts",
+    "./deploy/config": "./deploy/config.ts",
+    "./deploy/cli": "./deploy/cli.ts",
+    "./local/migrate-state": "./local/migrate-state.ts"
   },
   "files": [
     "*.ts",
     "local/*.ts",
+    "deploy/*.ts",
     "!**/*.test.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.79",
@@ -37,5 +42,17 @@
     "@opentelemetry/resources": "2.11.0",
     "@opentelemetry/sdk-logs": "0.222.0",
     "@types/bun": "1.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michielryvers/flarestack.git",
+    "directory": "src/alchemy"
+  },
+  "homepage": "https://github.com/michielryvers/flarestack#readme",
+  "bugs": {
+    "url": "https://github.com/michielryvers/flarestack/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,72 +1,109 @@
 # FlarestackTemplate
 
-A .NET 10 Blazor Web App using Interactive Auto for Todo and Interactive Server for account/admin pages with Better Auth OIDC, D1, and Aspire.
-The generated app includes versioned local framework packages; it does not need
-access to the Flarestack source repository. See [Interactive Auto](docs/interactive-auto.md)
-for the client/server split, authenticated HTTP endpoints and rendering behavior.
+A .NET 10 Blazor Web App with Interactive Auto Todo pages, server-rendered account
+and administration pages, D1, Better Auth and Aspire logs/traces. This preview
+includes packed Flarestack dependencies and does not require the framework repository.
 
 ## Run locally
 
-Prerequisites: .NET SDK 10.0.401, Bun 1.4.2 and Aspire CLI 13.5.3. Docker is required
-only for container mode. If using mise, trust the generated configuration and run
-`mise install`. Otherwise ensure the pinned SDK is on PATH.
+Install .NET SDK 10.0.401, Bun 1.4.2 and Aspire CLI 13.5.3. Docker is needed only
+for Container mode and cloud deployment. Then:
 
 ```sh
-bun install --frozen-lockfile
+bun install
 aspire run
 ```
 
-Open http://localhost:8787 and choose **Open my workspace**, then create an account. Open the **inbox** endpoint in Aspire to verify your email,
-then sign in.
-Aspire prints its dashboard login link (http://127.0.0.1:18888). Its logs and traces
-include D1 SQL text in Development, without bound parameter values. Metrics are
-not configured. Use `aspire start`, `aspire wait app` and `aspire stop` for a
-background session. Razor/C# edits use hot reload in this default fast mode.
+Open the application endpoint in Aspire (default http://localhost:8787). Register
+and open the **inbox** endpoint to verify your email. Aspire collects application,
+Worker, database and infrastructure logs and traces. Development SQL spans omit
+bound parameter values. No default administrator is created.
 
-To run another app alongside this one, stop it and use
-`bun run configure:local --port 9000` to assign eight consecutive ports. Auth
-origins and browser tests follow the gitignored `local.machine.json` override;
-committed defaults remain unchanged. Identical settings are a no-op. `bun run doctor` checks tools
-and local configuration. See [configuration and upgrades](docs/upgrading.md).
-
-Account recovery, profile/password settings, session management, and user
-administration are included. See [accounts and email](docs/accounts-and-email.md)
-for the first-admin setup through `FLARESTACK_ADMIN_USER_IDS` and the .NET APIs.
-No default admin is created. See [session/security semantics](docs/security-model.md).
-
-## Container mode
-
-Stop fast mode first, then run:
+Fast mode uses .NET hot reload. To switch modes, stop the app first:
 
 ```sh
-Flarestack__LocalMode=Container aspire run
+aspire stop
+bun run dev:container
 ```
 
-Alchemy owns the container; Aspire does not launch a second host app. Docker must
-reach its host bridge, including workerd's outbound listener and OTLP relay at
-172.17.0.1:4319. Restart the AppHost after source changes in container mode.
-D1 accounts and tasks persist in `infra/.alchemy` across restarts and mode changes.
-This generated application has its own stack identity (`app-TemplateSlug`), state,
-and user-secrets ID. No credentials or accounts are included in the template.
+Alchemy owns the container; Aspire does not start a duplicate application.
+Data persists in `infra/.alchemy` across local restarts and mode changes.
+Use `aspire start`, `aspire wait app` and `aspire stop` for background Fast sessions;
+`bun run dev:container --background` starts Container mode in the background.
 
-## Verify
+## Deploy to staging or production
 
-With the app running:
+Install and start Docker, then connect an Alchemy Cloudflare profile:
 
 ```sh
+cd infra
+bunx alchemy profile edit --add cloudflare
+cd ..
+aspire deploy --environment staging
+```
+
+Review `deployment.json` first. An empty staging configuration uses workers.dev
+and disables cloud email. Add a custom `domain` and `email` sender there when
+needed. Cloud resources are billable. Stage names are explicit and lowercase;
+repeating the command updates the same stage. Normal deploy rejects resource
+removal/replacement plans; destructive teardown requires a separate confirmation.
+
+Production is preview-only: ASP.NET Data Protection keys do not survive container
+replacement, so users may need to sign in again. Production settings must explicitly
+acknowledge this with `allowEphemeralDataProtectionKeys: true` before running
+`aspire deploy --environment production`. Keep one container instance.
+
+See [deployment](docs/deployment.md) for credentials, stable state, configuration,
+smoke checks and separate confirmed teardown. Never commit tokens or secret files.
+
+## Configure accounts and services
+
+Use the Aspire environment or your shell/CI's secret configuration for
+`FLARESTACK_ADMIN_USER_IDS` (comma-separated Better Auth user IDs). Do not commit
+personal IDs. See [accounts and email](docs/accounts-and-email.md) and
+[security semantics](docs/security-model.md).
+
+`FlarestackTemplate.Web/Program.cs` registers D1, authentication and email through
+`builder.AddFlarestackD1()`, `builder.AddFlarestackAuthentication()` and
+`builder.AddFlarestackEmail()`. Optional callbacks configure validated options.
+The public interfaces remain injectable into application services.
+
+## Change the application
+
+- Add Razor pages under the Web project's `Components/Pages`, or client-capable
+  pages in the Client project. Client code calls authenticated HTTP endpoints;
+  it cannot use private D1 bindings directly.
+- Add application services to dependency injection in `Program.cs`. Repository
+  methods must obtain the current user internally and filter reads and writes by
+  owner. Keep cross-user isolation tests when adding features.
+- Add a new numbered SQL file under `migrations`. Restart locally or deploy to
+  apply it. Never change a migration already applied to a shared stage.
+- Keep infrastructure configuration in `infra/alchemy.run.ts`; Alchemy owns the
+  resource graph. Preserve the private-route boundary, OIDC issuer and PKCE policy.
+  See [infrastructure extensions](docs/infrastructure.md), [public APIs](docs/public-api.md)
+  and [database access](docs/database.md).
+
+## Test and troubleshoot
+
+Browser tests also require Node.js 20 or later for the Playwright CLI. Normal
+application startup uses Bun and does not require Node.js.
+
+```sh
+bunx playwright install chromium
 bun run test:e2e
-bun run test:hot-reload
 bun run verify:telemetry
 ```
 
-Browser tests expect Chromium at `/usr/bin/chromium`; set `CHROMIUM_PATH` to override.
-For container mode, run `bun run test:e2e:container`, then
-`FLARESTACK_TEST_MODE=Container bun run verify:telemetry`.
+For Container mode use `bun run test:e2e:container`. Browser tests use Playwright's
+managed Chromium; `CHROMIUM_PATH` can override it. Hot reload tests apply to Fast mode.
 
-Framework packages are under `artifacts/nuget` and `artifacts/npm` and should be
-kept with this project during the local preview. NuGet's cache is `.packages/nuget`.
-Keep `patches/` too: the pinned Alchemy preview needs its bundled readiness fix
-when applying migrations to an existing database. Bun applies it during install.
-Update all Flarestack packages together when upgrading. This starter does not
-publish packages or deploy to Cloudflare. Production auth hardening and deployment
-configuration are separate work.
+Run `bun run doctor` for tool/configuration checks. If ports conflict, stop the app
+and run `bun run configure:local --port 9000`; the command checks an eight-port
+range and writes an idempotent, gitignored machine override. If Docker cannot reach
+the host, inspect Aspire logs and your bridge/firewall settings. Docker Desktop uses
+`host.docker.internal`; the authenticated OTLP relay supports Desktop and Linux.
+
+Keep `artifacts/nuget`, `artifacts/npm` and `patches` with this local-packaged preview.
+They are not a registry release. Upgrade Flarestack packages together; see
+[compatibility](docs/api-migration.md). Do not delete `.alchemy` to repair a deployment:
+that is provider state, not a disposable build cache.

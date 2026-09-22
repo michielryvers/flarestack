@@ -1,0 +1,6 @@
+{
+  "environments": {
+    "staging": {},
+    "production": {}
+  }
+}

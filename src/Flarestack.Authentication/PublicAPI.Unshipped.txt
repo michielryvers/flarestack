@@ -47,6 +47,7 @@ Flarestack.Authentication.Configuration.AuthenticationOptions.BackchannelBaseAdd
 Flarestack.Authentication.Configuration.AuthenticationOptions.ClientId.get -> string!
 Flarestack.Authentication.Configuration.AuthenticationOptions.ClientId.set -> void
 Flarestack.Authentication.Endpoints.FlarestackAuthentication
+Flarestack.Authentication.FlarestackAuthenticationExtensions
 Flarestack.Authentication.Registration.FlarestackAuthentication
 Flarestack.Authentication.Sessions.AccountSession
 Flarestack.Authentication.Sessions.AccountSession.<Clone>$() -> Flarestack.Authentication.Sessions.AccountSession!
@@ -86,6 +87,8 @@ static Flarestack.Authentication.Administration.UserPage.operator !=(Flarestack.
 static Flarestack.Authentication.Administration.UserPage.operator ==(Flarestack.Authentication.Administration.UserPage? left, Flarestack.Authentication.Administration.UserPage? right) -> bool
 static Flarestack.Authentication.Endpoints.FlarestackAuthentication.IsLocalReturnUrl(string? url) -> bool
 static Flarestack.Authentication.Endpoints.FlarestackAuthentication.MapFlarestackAccountEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, System.Action<Flarestack.Authentication.Configuration.AccountEndpointOptions!>? configure = null) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static Flarestack.Authentication.FlarestackAuthenticationExtensions.AddFlarestackAuthentication<TBuilder>(this TBuilder builder, System.Action<Flarestack.Authentication.Configuration.AuthenticationOptions!>? configure = null) -> TBuilder
+static Flarestack.Authentication.FlarestackAuthenticationExtensions.MapFlarestackAccountEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, System.Action<Flarestack.Authentication.Configuration.AccountEndpointOptions!>? configure = null) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static Flarestack.Authentication.Registration.FlarestackAuthentication.AddFlarestackAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! config) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Flarestack.Authentication.Registration.FlarestackAuthentication.AddFlarestackAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! config, System.Action<Flarestack.Authentication.Configuration.AuthenticationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Flarestack.Authentication.Sessions.AccountSession.operator !=(Flarestack.Authentication.Sessions.AccountSession? left, Flarestack.Authentication.Sessions.AccountSession? right) -> bool

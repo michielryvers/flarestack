@@ -5,8 +5,17 @@
     <Authors>Flarestack contributors</Authors>
     <Description>Flarestack framework for ASP.NET Core, Cloudflare D1 and Aspire local hosting.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/michielryvers/flarestack</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/michielryvers/flarestack.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <IsPackable>true</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <ItemGroup><None Include="$(MSBuildThisFileDirectory)PACKAGE_README.md" Pack="true" PackagePath="README.md" /></ItemGroup>
+  <ItemGroup><None Include="$(MSBuildThisFileDirectory)../LICENSE" Pack="true" PackagePath="LICENSE" /></ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' != 'Aspire.Hosting.Flarestack'"><Compile Include="$(MSBuildThisFileDirectory)Shared/Protocol.cs" Link="Protocol.cs" /></ItemGroup>
 </Project>

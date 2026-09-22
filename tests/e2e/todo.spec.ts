@@ -1,3 +1,4 @@
+import { runAspire } from "./aspire.ts";
 import {inboxUrl, origin} from "./local.ts";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -5,10 +6,9 @@ const exec = promisify(execFile);
 import { test, expect, type Page } from "@playwright/test";
 import {signUp} from "./accounts.ts";
 test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({browser}) => {
- const alice = await browser.newContext(); const page = await alice.newPage();
+ const alice = await browser.newContext(); let page = await alice.newPage();
  const sockets: string[] = []; page.on("websocket", socket => sockets.push(socket.url()));
  const suffix = crypto.randomUUID();
- const apiWrites: string[] = []; page.on("request", request => { if (request.url().includes("/api/todos") && request.method() !== "GET") apiWrites.push(request.method()); });
  await signUp(page, `alice-${suffix}@example.test`);
  await expect(page.getByRole("button",{name:"Add task",exact:true})).toBeEnabled();
  await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "Server");
@@ -26,6 +26,18 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
    await page.reload();
    await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "WebAssembly", {timeout: 3000});
  }).toPass({timeout: 45000, intervals: [2000]});
+ // A fresh page excludes outgoing Server sockets while retaining Alice's cookies
+ // and cached WASM runtime; blocking the circuit endpoints forbids Server fallback.
+ await page.close();
+ page = await alice.newPage();
+ const wasmSockets: string[] = [];
+ const apiWrites: string[] = [];
+ page.on("websocket", socket => wasmSockets.push(socket.url()));
+ page.on("request", request => { if (request.url().includes("/api/todos") && request.method() !== "GET") apiWrites.push(request.method()); });
+ const blazorEndpoint = (url: URL) => url.pathname === "/_blazor" || url.pathname === "/_blazor/negotiate";
+ await page.route(blazorEndpoint, route => route.abort());
+ await page.goto("/todos");
+ await expect(page.locator(".workspace")).toHaveAttribute("data-renderer", "WebAssembly");
  await expect(page.getByRole("button",{name:"Add task",exact:true})).toBeEnabled();
  await page.getByLabel("New task").fill("Created in WebAssembly");
  await page.getByRole("button",{name:"Add task",exact:true}).click();
@@ -33,8 +45,9 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
  await page.getByRole("checkbox",{name:"Complete Created in WebAssembly"}).check();
  await page.getByRole("button",{name:"Delete Created in WebAssembly",exact:true}).click();
  await expect(page.getByText("Created in WebAssembly",{exact:true})).toHaveCount(0);
- expect(sockets.some(url => url.includes("/_blazor"))).toBe(false);
+ expect(wasmSockets.some(url => url.includes("/_blazor"))).toBe(false);
  expect(apiWrites).toEqual(expect.arrayContaining(["POST", "PATCH", "DELETE"]));
+ await page.unroute(blazorEndpoint);
  const privateId = await page.locator("li[data-id]").getAttribute("data-id");
  const session = await (await page.request.get("/api/session")).json();
  expect(session).not.toHaveProperty("sid");
@@ -61,11 +74,14 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
  }).toBe(true);
  expect((await fetch(inbox + "/messages", {headers:{origin:"https://evil.example"}})).status).toBe(403);
  expect((await page.request.post("/v1/email", {data:{to:"evil@example.com",subject:"No",text:"No"}})).status()).not.toBe(202);
- await page.goto("/todos");
+ // Preserve both authenticated contexts while removing old Blazor circuits whose
+ // reconnect handler reloads the page and can race navigation after a restart.
+ await page.goto("about:blank");
+ await second.goto("about:blank");
  // Restart only this stack's application container, never unrelated containers.
  if (process.env.FLARESTACK_TEST_MODE !== "Container") {
-   await exec("aspire", ["resource", "todo", "restart", "--non-interactive"]);
-   await exec("aspire", ["wait", "todo", "--non-interactive"]);
+   await runAspire(["resource", "todo", "restart", "--non-interactive"]);
+   await runAspire(["wait", "todo", "--non-interactive"]);
  } else {
    const {stdout} = await exec("docker", ["ps", "--filter", "name=^workerd-flarestack-compatibility-", "--format", "{{.ID}} {{.Names}}"]);
    const apps = stdout.trim().split("\n").filter(line => !line.endsWith("-proxy"));
@@ -73,8 +89,8 @@ test("real OIDC, Interactive Auto CRUD, logout and two-user isolation", async ({
    await exec("docker", ["restart", apps[0]!.split(" ")[0]!]);
    await expect.poll(async () => { try { return (await fetch(origin + "/health")).status; } catch { return 0; } }).toBe(200);
  }
- await second.reload(); await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
- await page.reload(); await expect(page.getByText("Keep this task private",{exact:true})).toBeVisible();
+ await second.goto("/todos"); await expect(second.getByText("Bob's task",{exact:true})).toBeVisible();
+ await page.goto("/todos"); await expect(page.getByText("Keep this task private",{exact:true})).toBeVisible();
  await expect(page.getByText("Bob's task",{exact:true})).toHaveCount(0);
  await page.getByRole("button",{name:"Delete Keep this task private",exact:true}).click();
  await expect(page.getByText("Keep this task private",{exact:true})).toHaveCount(0);

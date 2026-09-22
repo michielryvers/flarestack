@@ -36,6 +36,7 @@ Flarestack.D1.D1Exception.Code.get -> string!
 Flarestack.D1.D1Exception.CorrelationId.get -> string!
 Flarestack.D1.D1Exception.D1Exception(string! code, string! operation, string! correlationId) -> void
 Flarestack.D1.D1Exception.Operation.get -> string!
+Flarestack.D1.D1HostApplicationBuilderExtensions
 Flarestack.D1.D1Options
 Flarestack.D1.D1Options.BaseAddress.get -> string!
 Flarestack.D1.D1Options.BaseAddress.set -> void
@@ -65,6 +66,7 @@ static Flarestack.D1.D1Command.operator ==(Flarestack.D1.D1Command? left, Flares
 static Flarestack.D1.D1CommandResult.operator !=(Flarestack.D1.D1CommandResult? left, Flarestack.D1.D1CommandResult? right) -> bool
 static Flarestack.D1.D1CommandResult.operator ==(Flarestack.D1.D1CommandResult? left, Flarestack.D1.D1CommandResult? right) -> bool
 static Flarestack.D1.D1Database.ConvertParameter(object? value) -> object?
+static Flarestack.D1.D1HostApplicationBuilderExtensions.AddFlarestackD1<TBuilder>(this TBuilder builder, System.Action<Flarestack.D1.D1Options!>? configure = null) -> TBuilder
 static Flarestack.D1.D1Registration.AddFlarestackD1(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Flarestack.D1.D1Registration.AddFlarestackD1(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<Flarestack.D1.D1Options!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly Flarestack.D1.D1Database.ActivitySource -> System.Diagnostics.ActivitySource!

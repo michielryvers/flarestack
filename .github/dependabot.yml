@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dotnet:
+        patterns: ['*']
+    ignore:
+      # Local Flarestack versions move as one release set, not registry updates.
+      - dependency-name: 'Flarestack.*'
+      - dependency-name: 'Aspire.Hosting.Flarestack'
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      javascript:
+        patterns: ['*']
+    ignore:
+      # Upgrading these requires rebasing and validating our checked-in patches.
+      - dependency-name: alchemy
+      - dependency-name: '@alchemy.run/cloudflare-runtime'

@@ -3,33 +3,43 @@
 Local checks are repeatable against packed artifacts. Cloud results are deliberately
 recorded separately from the broader local suite.
 
-| Capability | Fast local | Container local | Cloudflare |
+| Capability | Fast local | Container local | Generated Cloudflare stage |
 | --- | --- | --- | --- |
-| OIDC signup/login/logout | Browser tested | Browser tested | Verified signup/login/callback tested; logout pending |
-| D1 migrations and persistence | Tested | Tested | Initial migration and account persistence after redeploy tested |
-| Interactive Auto: cold Server → cached WebAssembly CRUD | Browser tested | Packed-template browser tested | Not tested |
-| Browser session revalidation / CSRF / owned API | Browser tested | Packed-template browser tested | Not tested |
-| Browser logs and WebAssembly API → D1 traces | Verified in Aspire | Verified in Aspire | Not tested |
-| Blazor WebSockets / owned CRUD | Browser tested | Browser tested | WebSocket handshake and owned read tested; browser CRUD pending |
-| Email | Capture tested | Capture tested | Verification delivery confirmed by recipient |
-| Password recovery / session controls | Browser tested | Browser tested | Not tested |
-| Admin disable / live circuit revocation | Opt-in browser test | Same opt-in test available | Not tested |
-| Auth failure / protocol mismatch | Unit tests + private-handler tests | Same transport contract | Not tested |
-| Razor hot reload | Tested | Restart required | Not applicable |
-| Clean template / upgrade | Clean install and previous-preview upgrade passed | Clean install / migration / restart tested; upgrade not run | Not tested |
+| OIDC signup/login/logout | Packed browser test | Packed browser test | Browser/API passed |
+| D1 initial migration, added migration, retained data | Passed | Passed | Passed; repeat deploy did not repeat migration |
+| Interactive Auto: cold Server → cached WebAssembly CRUD | Browser tested | Packed browser tested | CRUD passed; explicit rendering-mode assertion not run |
+| CSRF / owner-scoped API / cross-user isolation | Passed | Passed | Passed |
+| Browser logs and connected Worker/.NET/D1/auth/email traces | Verified in Aspire | Verified in Aspire | Export not configured |
+| Blazor WebSockets / owned CRUD | Passed | Passed | Browser CRUD and live workspace revocation passed |
+| Email verification and password recovery | Capture + browser passed | Capture + browser passed | Automated suite disabled email; later real verification requested, recipient confirmation pending |
+| Admin roles, disable/enable, session revocation | Packed browser passed | Packed browser passed | Browser/API passed |
+| Auth failure / protocol mismatch | Unit + private-handler tests | Same transport contracts | Fault injection not run |
+| Razor hot reload | Previously tested | Restart required | Not applicable |
+| Packed clean install / restart | Passed on Linux | Passed on Linux | Fresh external generated project deployed |
+| Windows hosted CI | Packed build/browser/restart/migration/telemetry passed | Not run | Not applicable |
+| Container sleep/wake / replacement | Startup/restart tested | Startup/restart tested | Inactive → restarted and healthy observed; isolated wake trigger/timing unverified |
+
+The automated cloud journey used synthetic accounts with email disabled. Email
+was enabled afterward and a real verification message requested; recipient
+confirmation remains pending. This does
+not establish verification/recovery delivery, custom-domain behavior, cloud OTLP
+export, or session persistence across container replacement. The earlier
+[cloud preview record](cloud-preview.md) is separate historical evidence.
 
 ## Reproduction
 
-Preview `0.1.0-local.2` uses protocol 2. Verification includes 36 .NET tests,
-60 Bun tests (137 assertions), TypeScript checks, and packed-template checks.
-Fast acceptance exercised the previous `0.1.0-local.1` archive as well as a
-clean installation. Both modes verify connected Worker/.NET/D1/auth/email traces
-and local logs in Aspire. The Auto tests also prove cached browser rendering without
-an active Blazor WebSocket, immediate API rejection after logout, idle browser
-session revocation and cross-user update/delete rejection. The Container acceptance
-run includes a published WASM bundle, an added migration and unchanged existing data. The [cloud preview record](cloud-preview.md) describes
-the initial deployment and measured cloud coverage; cloud failure behavior and
-the full vertical slice remain untested.
+Preview `0.1.0-local.2` uses protocol 2. Current verification includes **177 .NET
+tests**, **170 Bun tests**, TypeScript checking and two packed-template generation
+tests (832 assertions). Fresh Fast and Container applications with the same name
+were generated outside the repository and run concurrently on separate port
+blocks. Both passed administration, recovery, Todo isolation, migration/data
+retention and Aspire log/trace checks. Their Alchemy registries are app-local.
+
+The [short-path acceptance record](short-path-results.md) distinguishes actual
+local/cloud passes from remaining gaps. [Hosted CI run 35543723178](https://github.com/michielryvers/flarestack/actions/runs/35543723178) passed
+Linux Fast, Linux Container and Windows Fast on implementation commit `90b1e4e`.
+Subsequent documentation-only changes record those results. Earlier preview-upgrade and hot-reload
+results remain historical evidence; they were not repeated for this change.
 
 Build/unit/template/acceptance commands below run in the framework repository.
 Generated apps expose browser tests and telemetry verification; they do not carry
@@ -38,8 +48,8 @@ framework source or the package-building acceptance runner.
 ```sh
 bun run check
 bun run check:versions
-bun test src/alchemy spikes/compatibility
-dotnet test tests/Flarestack.Tests/Flarestack.Tests.csproj
+bun run test
+dotnet test Flarestack.slnx
 bun run test:template
 # With the app running:
 bun run test:e2e

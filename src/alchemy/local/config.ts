@@ -20,10 +20,10 @@ export interface LocalAppOptions {
   beforeStart?: string[];
 }
 
-export function loadLocalApp(path: string) {
+export function loadLocalApp(path: string, readMachineOverrides = true) {
   const options: LocalAppOptions = JSON.parse(readFileSync(path, "utf8"));
   const machine = resolve(dirname(path), "local.machine.json");
-  if (existsSync(machine)) {
+  if (readMachineOverrides && existsSync(machine)) {
     const overrides = JSON.parse(readFileSync(machine,"utf8"));
     if(Object.keys(overrides).some(key=>!["publicOrigin","bridgePort","inboxPort","relayPort","dashboardPort","otlpHttpPort","otlpGrpcPort","resourcePort"].includes(key))) throw new Error("Only port/origin machine overrides are supported");
     Object.assign(options, overrides);

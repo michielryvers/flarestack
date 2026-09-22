@@ -1,5 +1,10 @@
 # Phase 0 compatibility spike
 
+This document retains chronological investigation evidence. Early statements about
+missing APIs describe that dated snapshot, not the current implementation. For
+current package publication constraints, see [release policy](releases.md); local
+startup and deployment contracts are documented in [the public API](public-api.md).
+
 Checked on 2026-09-19, branch `compatibility-spike`. This is an initial review
 artifact, not a completed Phase 0 gate. Package APIs remain deliberately deferred.
 

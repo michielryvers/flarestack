@@ -1,3 +1,5 @@
+import type { BetterAuthOptions } from "better-auth";
+import { authEmailPolicy } from "./auth-email-policy.ts";
 import { protocolHeaders, protocolVersion, privateRequest } from "./protocol.ts";
 import { internalAuth } from "./auth-internal.ts";
 import { telemetryPath } from "./tracing.ts";
@@ -18,29 +20,36 @@ export interface AuthWorkerOptions {
   client: OAuthClientOptions;
   email?: ReturnType<typeof import("./email.ts").createEmailWorker>;
   features?: AuthFeatures;
+  /** Resolve provider credentials through Config.Redacted inside the Worker effect. */
+  socialProviders?: Effect.Effect<NonNullable<BetterAuthOptions["socialProviders"]>, Config.ConfigError>;
 }
 
 export function createAuthWorker(options: AuthWorkerOptions) {
   return Cloudflare.Worker("Auth", {
     main: options.main, workersDev: false,
     observability: { enabled: true },
-    env: { ...(options.email ? { Email: options.email } : {}), FLARESTACK_ADMIN_USER_IDS: process.env.FLARESTACK_ADMIN_USER_IDS ?? "" },
+    env: { ...(options.email ? { Email: options.email } : {}), FLARESTACK_ADMIN_USER_IDS: process.env.FLARESTACK_ADMIN_USER_IDS ?? "", FLARESTACK_AUTH_REQUIRE_EMAIL_VERIFICATION: String(options.features?.requireEmailVerification ?? false) },
     compatibility: { date: "2026-09-08", flags: ["nodejs_compat"] },
   }, Effect.gen(function* () {
     const publicOrigin = yield* Config.String("PUBLIC_ORIGIN");
+    const socialProviders = options.socialProviders ? yield* options.socialProviders : undefined;
     // One action owns schema migration followed by client provisioning. Separate
     // Alchemy actions run concurrently and race CREATE TABLE on a fresh D1.
     const env = yield* Cloudflare.WorkerEnvironment;
-    const features = { ...options.features, adminUserIds: String(env.FLARESTACK_ADMIN_USER_IDS ?? "").split(",").map(id => id.trim()).filter(Boolean) };
-    const sendEmail = options.email ? async (message: {to: string; subject: string; text: string}, request?: Request) => {
+    const { requireEmailVerification, hasEmail } = authEmailPolicy(
+      { requireVerification: options.features?.requireEmailVerification ?? false, hasEmail: !!options.email },
+      globalThis.__ALCHEMY_RUNTIME__ ? env : undefined,
+    );
+    const features = { ...options.features, requireEmailVerification, adminUserIds: String(env.FLARESTACK_ADMIN_USER_IDS ?? "").split(",").map(id => id.trim()).filter(Boolean) };
+    const sendEmail = hasEmail ? async (message: {to: string; subject: string; text: string}, request?: Request) => {
       const headers = new Headers({"content-type": "application/json", ...protocolHeaders});
       for (const name of ["traceparent", "tracestate"]) if (request?.headers.get(name)) headers.set(name, request.headers.get(name)!);
       const result = await (env.Email as {fetch(r:Request):Promise<Response>}).fetch(new Request("http://email.internal/v1/email", {method: "POST", headers, body: JSON.stringify(message)}));
       if (result.headers.get("x-flarestack-protocol") !== String(protocolVersion)) throw new Error("Auth/email protocol mismatch; upgrade the complete Flarestack package set.");
       if (!result.ok) throw new Error("Email delivery unavailable");
     } : undefined;
-    if (options.features?.requireEmailVerification && !sendEmail) throw new Error("Email verification requires an email Worker");
-    const auth = yield* BetterAuth({ ...authOptions(publicOrigin, options.client, false, features, sendEmail), migrate: false });
+    if (requireEmailVerification && !sendEmail) throw new Error("Email verification requires an email Worker");
+    const auth = yield* BetterAuth({ ...authOptions(publicOrigin, options.client, false, features, sendEmail, socialProviders), migrate: false });
     if (!globalThis.__ALCHEMY_RUNTIME__) {
       const { provisionClient } = yield* Effect.promise(() => import("./provision-client.ts"));
       yield* provisionClient(publicOrigin, options.client, features);

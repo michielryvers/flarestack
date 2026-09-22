@@ -1,6 +1,5 @@
-import {execFile} from "node:child_process";
-import {promisify} from "node:util";
-const exec = promisify(execFile);
+import { submitSignIn } from "./sign-in.ts";
+import { runAspire } from "./aspire.ts";
 import {inboxUrl, origin} from "./local.ts";
 import {test, expect} from "@playwright/test";
 import {signUp, password} from "./accounts.ts";
@@ -33,8 +32,7 @@ test("verification, password recovery, profile and session revocation", async ({
   await page.getByRole("button",{name:"Continue"}).click();
   await expect(page.locator("#auth-error")).not.toBeEmpty();
   await page.getByLabel("Password",{exact:true}).fill(password+"New");
-  await page.getByRole("button",{name:"Continue"}).click();
-  await expect.poll(()=>new URL(page.url()).pathname).toBe("/todos");
+  await submitSignIn(page);
   // Reset links are single-use.
   await other.goto(link);
   await other.getByLabel("New password",{exact:true}).fill(password+"Again");
@@ -42,7 +40,7 @@ test("verification, password recovery, profile and session revocation", async ({
   await expect(other.getByRole("status")).toContainText("reset link is invalid");
   const secret = new URL(link).pathname.split("/").pop()!;
   for (const kind of ["logs", "spans"]) {
-    const {stdout} = await exec("aspire", ["otel", kind, "--format", "Json", "--limit", "10000", "--non-interactive"], {maxBuffer: 16 * 1024 * 1024});
+    const {stdout} = await runAspire(["otel", kind, "--format", "Json", "--limit", "10000", "--non-interactive"], {maxBuffer: 16 * 1024 * 1024});
     expect(stdout.includes(secret), `Reset token leaked into ${kind}`).toBe(false);
   }
   await context.close(); await recovery.close();
@@ -59,8 +57,7 @@ test("password changes and self-service session controls", async ({browser}) => 
       await other.goto("/todos");
       await other.getByLabel("Email",{exact:true}).fill(email);
       await other.getByLabel("Password",{exact:true}).fill(value);
-      await other.getByRole("button",{name:"Continue"}).click();
-      await expect.poll(()=>new URL(other.url()).pathname).toBe("/todos");
+      await submitSignIn(other);
     };
     await loginOther(password);
     await page.goto("/account/security");

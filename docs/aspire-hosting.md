@@ -1,5 +1,25 @@
 # Aspire hosting
 
+The normal entrypoint uses the package root namespace and builder configuration:
+
+```csharp
+using Aspire.Hosting.Flarestack;
+
+var builder = DistributedApplication.CreateBuilder(args);
+builder.AddFlarestack("cloudflare", "../infra");
+builder.Build().Run();
+```
+
+`Flarestack:LocalMode` defaults to `Fast`; `Flarestack:ApplicationName` defaults to
+`cloudflare-app` here. The template sets the application name to `app` in its
+AppHost settings. Machine dashboard ports apply to this builder without mutating
+process-wide environment variables. Explicit command-line endpoint overrides win.
+No pre-builder call is needed. In publish mode the same registration exposes the
+[deployment pipeline](deployment.md) without starting local resources.
+
+## Explicit resource composition
+
+
 Create the platform, then explicitly attach the application declared by its infrastructure manifest:
 
 ```csharp
@@ -34,4 +54,4 @@ The installed Aspire.Hosting 13.5.3 executable API was checked before implementi
 
 Aspire's native [`AddBunApp`](https://aspire.dev/reference/api/csharp/aspire.hosting.javascript/javascripthostingextensions/methods/#addbunapp) runs a Bun script directly and supplies JavaScript package-manager/container publishing conventions. It would not preserve the infrastructure contract's arbitrary direct development and watch commands, including the existing telemetry wrappers, without translating that contract. This change therefore retains the validated single-command parser and does not add the JavaScript integration package or a package-manager installer process.
 
-An `AddProject(...).WithFlarestack(...)` facade would also obscure ownership: Aspire would create a second application process in Container mode, and the manifest's traced watcher would be bypassed in Fast mode. The explicit manifest application attachment represents the current lifecycle directly. Tunnel discovery and cloud deployment are separate work.
+An `AddProject(...).WithFlarestack(...)` facade would also obscure ownership: Aspire would create a second application process in Container mode, and the manifest's traced watcher would be bypassed in Fast mode. The explicit manifest application attachment represents the current lifecycle directly. The same platform owns the custom deploy pipeline described in [deployment](deployment.md).

@@ -1,0 +1,136 @@
+name: Release candidate
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the validated coordinated set (select its immutable version tag)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  identity:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - name: Require an immutable coordinated release tag
+        id: identity
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          bun scripts/check-versions.ts
+          bun scripts/check-release.ts
+          bun -e 'await Bun.write(process.env.GITHUB_OUTPUT, `version=${(await Bun.file("version.json").json()).version}\n`)'
+
+  verification:
+    needs: identity
+    uses: ./.github/workflows/ci.yml
+
+  artifacts:
+    needs: [identity, verification]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      VERSION: ${{ needs.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4.2'
+      - run: dotnet tool install --global Aspire.Cli --version 13.5.3
+      - run: bun install --frozen-lockfile
+      - name: Include repository license in npm archive
+        run: cp LICENSE src/alchemy/LICENSE
+      - name: Build the candidate package set
+        run: bun run prepare:local
+      - name: Verify portable symbols and Source Link
+        run: dotnet run scripts/verify-symbols.cs -- artifacts/nuget "$VERSION" "$GITHUB_SHA"
+      - name: Check release policy tests
+        run: bun test ./scripts/release-policy.test.ts
+      # This intentionally fails for today's archive-backed, patched local template.
+      # No package is published until the complete registry template contract passes.
+      - name: Enforce registry readiness before enabling any publication
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: bun scripts/check-release.ts --registry
+      - name: Record exact package bytes
+        working-directory: artifacts
+        run: sha256sum nuget/*.nupkg nuget/*.snupkg "npm/flarestack-alchemy-${VERSION}.tgz" templates/*.nupkg > SHA256SUMS
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release-${{ needs.identity.outputs.version }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/nuget/*.snupkg
+            artifacts/npm/flarestack-alchemy-${{ needs.identity.outputs.version }}.tgz
+            artifacts/templates/*.nupkg
+            artifacts/SHA256SUMS
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.repository == 'michielryvers/flarestack'
+    needs: [identity, artifacts]
+    runs-on: ubuntu-24.04
+    environment: package-publication
+    timeout-minutes: 10
+    env:
+      VERSION: ${{ needs.identity.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-${{ needs.identity.outputs.version }}
+          path: packages
+      - name: Verify candidate checksums
+        working-directory: packages
+        run: sha256sum --check SHA256SUMS
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.401'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Require both registry credentials before publishing
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          test -n "$NUGET_API_KEY"
+      - name: Publish npm runtime
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          tag=latest
+          if [[ "$VERSION" == *-* ]]; then tag=next; fi
+          npm publish "packages/npm/flarestack-alchemy-${VERSION}.tgz" --access public --tag "$tag" --ignore-scripts
+      - name: Publish framework NuGet packages, then template
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          test -n "$NUGET_API_KEY"
+          # NuGet also pushes each adjacent .snupkg; do not use --no-symbols.
+          for package in packages/nuget/*.nupkg; do
+            test -f "${package%.nupkg}.snupkg"
+            dotnet nuget push "$package" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
+          done
+          dotnet nuget push "packages/templates/Flarestack.Templates.${VERSION}.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"

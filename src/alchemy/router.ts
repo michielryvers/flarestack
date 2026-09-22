@@ -20,7 +20,7 @@ export function forwardedRequest(request: Request): Request {
   return new Request(request, { headers });
 }
 
-export async function route(request: Request, auth: (request: Request) => Promise<Response>, app: (request: Request) => Promise<Response>): Promise<Response> {
+export async function route(request: Request, auth: (request: Request) => Promise<Response>, app: (request: Request) => Promise<Response>, customRoute?: (request: Request) => Promise<Response | undefined>): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "GET" && url.pathname === "/_flarestack/health") return Response.json({ status: "ok", protocolVersion });
   if (request.method === "GET" && url.pathname === "/_flarestack/ready") {
@@ -31,7 +31,9 @@ export async function route(request: Request, auth: (request: Request) => Promis
       return Response.json({status: response.ok ? "ready" : "starting"}, {status: response.ok ? 200 : 503});
     } catch { return Response.json({status:"starting"}, {status:503}); }
   }
-  if (url.pathname.startsWith("/_flarestack/internal/")) return new Response(null, {status:404});
+  if (url.pathname === "/_flarestack" || url.pathname.startsWith("/_flarestack/")) return new Response(null, {status:404});
   if (isAuthPath(url.pathname)) return auth(request);
-  return app(forwardedRequest(request));
+  const forwarded = forwardedRequest(request);
+  const response = await customRoute?.(forwarded);
+  return response ?? app(forwarded);
 }
